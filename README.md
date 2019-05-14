@@ -1,52 +1,181 @@
-# Decentraland Burner Contract
+# Avatars Username Contract
+
+## Storage
 
 ```solidity
-pragma solidity ^0.5.0;
-
-interface ERC20 {
-    function burn(uint256 amount) external;
-    function balanceOf(address who) external view returns (uint256);
+contract ERC20Interface {
+    function balanceOf(address from) public view returns (uint256);
+    function transferFrom(address from, address to, uint tokens) public returns (bool);
+    function allowance(address owner, address spender) public view returns (uint256);
+    function burn(uint256 amount) public;
 }
 
-contract DecentralandBurner is Ownable {
-    ERC20 public mana;
-    event Executed(address indexed _target, bytes _data);
+contract AvatarsStorage {
+    ERC20Interface public manaToken;
+    uint256 public blocksUntilReveal;
+    uint256 public price = 100000000000000000000; // 100 in wei
+
+    struct Data {
+        string userId;
+        string username;
+        string metadata;
+    }
+    struct Commit {
+        bytes32 commit;
+        uint256 blockNumber;
+        bool revealed;
+    }
+
+    // Stores commit messages by accounts
+    mapping (address => Commit) public commit;
+    // Stores usernames used
+    mapping (string => address) usernames;
+    // Stores account data
+    mapping (address => Data) public user;
+    // Stores account roles
+    mapping (address => bool) public allowed;
+
+    event Register(
+        address indexed _owner,
+        string _userId,
+        string _username,
+        string _metadata,
+        address indexed _caller
+    );
+    event MetadataChanged(address indexed _owner, string _metadata);
+    event Allow(address indexed _caller, address indexed _account, bool _allowed);
+    event CommitUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
+    event RevealUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
+}
+```
+
+## Implementation
+
+```
+contract UsernameRegistry is AvatarsStorage {
 
     /**
-    * @dev Constructor of the contract.
-    * @param _mana - address for the mana contract.
+    * @dev Constructor of the contract
+    * @param _mana - address of the mana token
+    * @param _blocksUntilReveal - uint256 for the blcoks that should pass before reveal a commit
     */
-    constructor(address _mana) public;
+    constructor(ERC20Interface _mana, uint256 _blocksUntilReveal) public;
 
     /**
-    * @dev Execute a target function with value and data.
-    * @notice This function can be only called by the owner of the contract.
-    * The msg.sender of the call will be this contract address.
-    * The msg.data will be whatever it is on _data parameter.
-    * _data should start with 4 bytes related to a function selector 0x12345678....
-    * If you send ETH to this method, it will be redirected to the target.
-    * @param _target - address for the target contract.
-    * @param _data - bytes for the msg.data.
-    * @return response - bytes for the call response.
+    * @dev Check if the sender is an allowed account
     */
-    function execute(address payable _target, bytes calldata _data)
+    modifier onlyAllowed();
+
+    /**
+    * @dev Manage role for an account
+    * @param _account - address of the account to be managed
+    * @param _allowed - bool whether the account should be allowed or not
+    */
+    function setAllowance(address _account, bool _allowed) external onlyAllowed;
+
+    /**
+    * @dev Register a usename
+    * @notice that the username should be less or equal than 32 bytes and blanks are not allowed
+    * @param _beneficiary - address of the account to be managed
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function _registerUsername(
+        address _beneficiary,
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    internal;
+
+    /**
+    * @dev Register a usename
+    * @notice that the username can only be registered by an allowed account
+    * @param _beneficiary - address of the account to be managed
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function registerUsername(
+        address _beneficiary,
+        string calldata _userId,
+        string calldata _username,
+        string calldata _metadata
+    )
     external
-    payable
-    onlyOwner
-    returns (bytes memory);
+    onlyAllowed;
 
     /**
-    * @dev Burn MANA owned by this contract
+    * @dev Commit a hash for a desire username
+    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @param _hash - bytes32 of the commit hash
     */
-    function burn() external;
+    function commitUsername(bytes32 _hash) public;
+
+   /**
+    * @dev Reveal a commit
+    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function revealUsername(
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    public;
 
     /**
-    * @dev Check whether a contract is owned by this contract.
-    * @notice If the _target contract is not a contract or not implement
-    * owner() function, the call will fail.
-    * @param _target - address for the target contract.
-    * @return bool whether the _target contract is owned by this contract or not.
+    * @dev Return a bytes32 hash for the given arguments
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    * @return bytes32 - for the hash of the given arguments
     */
-    function isContractOwner(address _target) external view returns (bool);
+    function getHash(
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    public
+    view
+    returns (bytes32);
+
+    /**
+    * @dev Set metadata for an existing user
+    * @param _metadata - string for the metadata
+    */
+    function setMetadata(string calldata _metadata) external;
+
+    /**
+    * @dev Check whether a user exist or not
+    * @param _user - address for the user
+    * @return bool - whether the user exist or not
+    */
+    function userExists(address _user) public view returns (bool);
+
+    /**
+    * @dev Check whether a username is available or not
+    * @param _username - string for the username
+    * @return bool - whether the username is available or not
+    */
+    function isUsernameAvailable(string memory _username) public view returns (bool);
+
+    /**
+    * @dev Validate a username
+    * @param _username - string for the username
+    */
+    function _requireUsernameValid(string memory _username) internal pure;
+
+    /**
+    * @dev Validate if a user has balance and the contract has enough allowance
+    * to use user MANA on his belhalf
+    * @param _user - address of the user
+    */
+    function _requireBalance(address _user) internal view;
+
 }
+
 ```

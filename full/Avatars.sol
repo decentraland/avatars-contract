@@ -1,5 +1,5 @@
 
-// File: contracts/Avatars.sol
+// File: contracts/AvatarsStorage.sol
 
 pragma solidity ^0.5.0;
 
@@ -10,8 +10,30 @@ contract ERC20Interface {
     function burn(uint256 amount) public;
 }
 
+contract AvatarsStorage {
+    ERC20Interface public manaToken;
+    uint256 public blocksUntilReveal;
+    uint256 public price = 100000000000000000000; // 100 in wei
 
-contract UsernameRegistry {
+    struct Data {
+        string userId;
+        string username;
+        string metadata;
+    }
+    struct Commit {
+        bytes32 commit;
+        uint256 blockNumber;
+        bool revealed;
+    }
+
+    // Stores commit messages by accounts
+    mapping (address => Commit) public commit;
+    // Stores usernames used
+    mapping (string => address) usernames;
+    // Stores account data
+    mapping (address => Data) public user;
+    // Stores account roles
+    mapping (address => bool) public allowed;
 
     event Register(
         address indexed _owner,
@@ -22,26 +44,34 @@ contract UsernameRegistry {
     );
     event MetadataChanged(address indexed _owner, string _metadata);
     event Allow(address indexed _caller, address indexed _account, bool _allowed);
+    event CommitUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
+    event RevealUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
+}
+
+// File: contracts/Avatars.sol
+
+pragma solidity ^0.5.0;
 
 
-    ERC20Interface public manaToken;
-    uint256 public price = 100000000000000000000;
-    struct Data {
-        string userId;
-        string username;
-        string metadata;
-    }
-    mapping (string => address) usernames;
-    mapping (address => Data) public user;
-    mapping (address => bool) public allowed;
+contract UsernameRegistry is AvatarsStorage {
 
+    /**
+    * @dev Constructor of the contract
+    * @param _mana - address of the mana token
+    * @param _blocksUntilReveal - uint256 for the blcoks that should pass before reveal a commit
+    */
+    constructor(ERC20Interface _mana, uint256 _blocksUntilReveal) public {
+        require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
 
-    constructor(ERC20Interface _mana) public {
         manaToken = _mana;
-        // Allow sender to register usernames
+        blocksUntilReveal = _blocksUntilReveal;
+        // Allow deployer to register usernames
         allowed[msg.sender] = true;
     }
 
+    /**
+    * @dev Check if the sender is an allowed account
+    */
     modifier onlyAllowed() {
         require(
             allowed[msg.sender] == true,
@@ -50,67 +80,208 @@ contract UsernameRegistry {
         _;
     }
 
+    /**
+    * @dev Manage role for an account
+    * @param _account - address of the account to be managed
+    * @param _allowed - bool whether the account should be allowed or not
+    */
     function setAllowance(address _account, bool _allowed) external onlyAllowed {
         require(_account != msg.sender, "You can not manage your role");
         allowed[_account] = _allowed;
         emit Allow(msg.sender, _account, _allowed);
     }
 
-    function registerUsername(
+    /**
+    * @dev Register a usename
+    * @notice that the username should be less or equal than 32 bytes and blanks are not allowed
+    * @param _beneficiary - address of the account to be managed
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function _registerUsername(
         address _beneficiary,
-        string calldata _userId,
-        string calldata _username,
-        string calldata _metadata
-    ) external onlyAllowed {
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    internal
+    {
         _requireBalance(_beneficiary);
+        _requireUsernameValid(_username);
         require(isUsernameAvailable(_username), "The username was already taken");
 
         manaToken.transferFrom(_beneficiary, address(this), price);
         manaToken.burn(price);
 
+        // Save username
         usernames[_username] = _beneficiary;
-        Data memory data = Data(
-            _userId,
-            _username,
-            _metadata
-        );
-        user[_beneficiary] = data;
+
+        Data storage data = user[_beneficiary];
+
+        // Free previous username
+        delete usernames[data.username];
+
+        // Set data
+        data.userId = _userId;
+        data.username = _username;
+
+        bytes memory metadata = bytes(_metadata);
+        if (metadata.length > 0) {
+            data.metadata = _metadata;
+        }
 
         emit Register(
             _beneficiary,
             _userId,
             _username,
-            _metadata,
+            data.metadata,
             msg.sender
         );
     }
 
+    /**
+    * @dev Register a usename
+    * @notice that the username can only be registered by an allowed account
+    * @param _beneficiary - address of the account to be managed
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function registerUsername(
+        address _beneficiary,
+        string calldata _userId,
+        string calldata _username,
+        string calldata _metadata
+    )
+    external
+    onlyAllowed
+    {
+        _registerUsername(_beneficiary, _userId, _username, _metadata);
+    }
+
+    /**
+    * @dev Commit a hash for a desire username
+    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @param _hash - bytes32 of the commit hash
+    */
+    function commitUsername(bytes32 _hash) public {
+        commit[msg.sender].commit = _hash;
+        commit[msg.sender].blockNumber = block.number;
+
+        emit CommitUsername(msg.sender, _hash, block.number);
+    }
+
+    /**
+    * @dev Reveal a commit
+    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    */
+    function revealUsername(
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    public
+    {
+        Commit storage userCommit = commit[msg.sender];
+
+        require(userCommit.commit != 0, "User has not a commit to be revealed");
+        require(userCommit.revealed == false, "Commit was already revealed");
+        require(
+            getHash(_userId, _username, _metadata) == userCommit.commit,
+            "Revealed hash does not match commit"
+        );
+        require(
+            block.number > userCommit.blockNumber + blocksUntilReveal,
+            "Reveal can not be done before blocks passed"
+        );
+
+        userCommit.revealed = true;
+
+        emit RevealUsername(msg.sender, userCommit.commit, block.number);
+
+        _registerUsername(msg.sender, _userId, _username, _metadata);
+    }
+
+    /**
+    * @dev Return a bytes32 hash for the given arguments
+    * @param _userId - string for the userid
+    * @param _username - string for the username
+    * @param _metadata - string for the metadata
+    * @return bytes32 - for the hash of the given arguments
+    */
+    function getHash(
+        string memory _userId,
+        string memory _username,
+        string memory _metadata
+    )
+    public
+    view
+    returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(address(this), msg.sender, _userId, _username, _metadata)
+        );
+    }
+
+    /**
+    * @dev Set metadata for an existing user
+    * @param _metadata - string for the metadata
+    */
     function setMetadata(string calldata _metadata) external {
-        require(userExists(msg.sender), "The user not exist");
+        require(userExists(msg.sender), "The user does not exist");
 
         user[msg.sender].metadata = _metadata;
         emit MetadataChanged(msg.sender, _metadata);
     }
 
+    /**
+    * @dev Check whether a user exist or not
+    * @param _user - address for the user
+    * @return bool - whether the user exist or not
+    */
     function userExists(address _user) public view returns (bool) {
         Data memory data = user[_user];
         bytes memory username = bytes(data.username);
         return username.length > 0;
     }
 
+    /**
+    * @dev Check whether a username is available or not
+    * @param _username - string for the username
+    * @return bool - whether the username is available or not
+    */
     function isUsernameAvailable(string memory _username) public view returns (bool) {
-        bytes memory tempUsername = bytes(_username);
-        require(tempUsername.length <= 32, "Username should be less than 32 characters");
         return usernames[_username] == address(0);
     }
 
-    function _requireBalance(address _account) internal view {
+    /**
+    * @dev Validate a username
+    * @param _username - string for the username
+    */
+    function _requireUsernameValid(string memory _username) internal pure {
+        bytes memory tempUsername = bytes(_username);
+        require(tempUsername.length <= 32, "Username should be less than 32 characters");
+        for(uint256 i = 0; i < tempUsername.length; i++) {
+            require(tempUsername[i] != " ", "No blanks are allowed");
+        }
+    }
+
+    /**
+    * @dev Validate if a user has balance and the contract has enough allowance
+    * to use user MANA on his belhalf
+    * @param _user - address of the user
+    */
+    function _requireBalance(address _user) internal view {
         require(
-            manaToken.balanceOf(_account) >= price,
+            manaToken.balanceOf(_user) >= price,
             "Insufficient funds"
         );
         require(
-            manaToken.allowance(_account, address(this)) >= price,
+            manaToken.allowance(_user, address(this)) >= price,
             "The contract is not authorized to use MANA on sender behalf"
         );
     }
