@@ -1,0 +1,8 @@
+{
+  "zosversion": "2.2",
+  "name": "Avatars",
+  "version": "0.1.0",
+  "contracts": {
+    "UsernameRegistry": "UsernameRegistry"
+  }
+}

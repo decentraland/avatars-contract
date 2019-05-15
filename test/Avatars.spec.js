@@ -73,31 +73,32 @@ describe('Avatars', function() {
     await mana.deploy({ txParams: creationParams })
     manaContract = mana.getContract()
 
-    avatarsContract = await Avatars.new(
-      manaContract.address,
-      blocksUntilReveal,
-      {
-        ...creationParams,
-        ...fromOwner
-      }
-    )
+    avatarsContract = await Avatars.new(creationParams)
+
+    avatarsContract.initialize(manaContract.address, owner, blocksUntilReveal)
 
     await mana.authorize(avatarsContract.address)
   })
 
   describe('Constructor', function() {
     it('should be depoyed with valid arguments', async function() {
-      const contract = await Avatars.new(
-        manaContract.address,
-        blocksUntilReveal,
-        creationParams
-      )
-      expect(contract).to.be.not.equal(EMPTY_20_BYTES)
+      const contract = await Avatars.new(creationParams)
+      await contract.initialize(manaContract.address, owner, blocksUntilReveal)
+
+      const mana = await contract.manaToken()
+      const canRegister = await contract.allowed(owner)
+      const blocks = await contract.blocksUntilReveal()
+
+      expect(mana).to.be.equal(manaContract.address)
+      expect(canRegister).to.be.equal(true)
+      expect(blocks).to.be.eq.BN(blocksUntilReveal)
     })
 
     it('reverts when trying to deploy with blocksUntilReveal = 0', async function() {
+      const contract = await Avatars.new(creationParams)
+
       await assertRevert(
-        Avatars.new(manaContract.address, 0, creationParams),
+        contract.initialize(manaContract.address, owner, 0),
         'Blocks until reveal should be greather than 0'
       )
     })

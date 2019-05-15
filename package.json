@@ -43,5 +43,8 @@
     "truffle": "^5.0.11",
     "truffle-flattener": "^1.2.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "zos": "^2.2.3",
+    "zos-lib": "^2.2.3"
+  }
 }
