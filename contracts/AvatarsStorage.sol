@@ -10,7 +10,7 @@ contract ERC20Interface {
 contract AvatarsStorage {
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
-    uint256 public price = 100000000000000000000; // 100 in wei
+    uint256 public price;
 
     struct Data {
         string userId;

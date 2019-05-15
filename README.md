@@ -71,11 +71,11 @@ contract UsernameRegistry is AvatarsStorage {
     * @param _account - address of the account to be managed
     * @param _allowed - bool whether the account should be allowed or not
     */
-    function setAllowance(address _account, bool _allowed) external onlyAllowed;
+    function setAllowed(address _account, bool _allowed) external onlyAllowed;
 
     /**
     * @dev Register a usename
-    * @notice that the username should be less or equal than 32 bytes and blanks are not allowed
+    * @notice that the username should be less than or equal 32 bytes and blanks are not allowed
     * @param _beneficiary - address of the account to be managed
     * @param _userId - string for the userid
     * @param _username - string for the username
@@ -108,14 +108,14 @@ contract UsernameRegistry is AvatarsStorage {
 
     /**
     * @dev Commit a hash for a desire username
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _hash - bytes32 of the commit hash
     */
     function commitUsername(bytes32 _hash) public;
 
    /**
     * @dev Reveal a commit
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata

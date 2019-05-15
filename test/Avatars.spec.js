@@ -14,7 +14,6 @@ describe('Avatars', function() {
   // globals
   const EMPTY_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const EMPTY_20_BYTES = '0x0000000000000000000000000000000000000000'
   const userId = 'guest_1234'
   const username = 'imazzara'
   const metadata = 'the metadata'
@@ -132,7 +131,7 @@ describe('Avatars', function() {
     })
 
     it('should register a username by an allowed account', async function() {
-      await avatarsContract.setAllowance(user, true, fromOwner)
+      await avatarsContract.setAllowed(user, true, fromOwner)
 
       await avatarsContract.registerUsername(
         anotherUser,
@@ -293,7 +292,7 @@ describe('Avatars', function() {
           metadata,
           fromOwner
         ),
-        'Username should be less than 32 characters'
+        'Username should be less than or equal 32 characters'
       )
     })
 
@@ -418,6 +417,73 @@ describe('Avatars', function() {
       expect(userCommit.commit).to.be.equal(hash)
       expect(userCommit.blockNumber).to.eq.BN(commitBlockNumber)
       expect(userCommit.revealed).to.eq.BN(true)
+    })
+
+    it('should override previous commit', async function() {
+      await avatarsContract.commitUsername(hash, fromUser)
+
+      await increaseBlocks(blocksUntilReveal - 1)
+      await assertRevert(
+        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        'Reveal can not be done before blocks passed'
+      )
+
+      const newUsername = username + 'v2'
+      const newHash = await avatarsContract.getHash(
+        userId,
+        newUsername,
+        metadata,
+        fromUser
+      )
+      await avatarsContract.commitUsername(newHash, fromUser)
+
+      await increaseBlocks(1)
+      await assertRevert(
+        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        'Revealed hash does not match commit'
+      )
+      await assertRevert(
+        avatarsContract.revealUsername(userId, newUsername, metadata, fromUser),
+        'Reveal can not be done before blocks passed'
+      )
+
+      await increaseBlocks(blocksUntilReveal)
+
+      await avatarsContract.revealUsername(
+        userId,
+        newUsername,
+        metadata,
+        fromUser
+      )
+    })
+
+    it('should update username', async function() {
+      await avatarsContract.commitUsername(hash, fromUser)
+      await increaseBlocks(blocksUntilReveal)
+      await avatarsContract.revealUsername(userId, username, metadata, fromUser)
+
+      // Check user data
+      let data = await avatarsContract.user(user)
+      expect(data.userId).to.be.equal(userId)
+      expect(data.username).to.be.equal(username)
+      expect(data.metadata).to.be.equal(metadata)
+
+      const newUsername = username + 'v2'
+      const newHash = await avatarsContract.getHash(
+        userId,
+        newUsername,
+        '',
+        fromUser
+      )
+      await avatarsContract.commitUsername(newHash, fromUser)
+
+      await increaseBlocks(blocksUntilReveal)
+      await avatarsContract.revealUsername(userId, newUsername, '', fromUser)
+
+      data = await avatarsContract.user(user)
+      expect(data.userId).to.be.equal(userId)
+      expect(data.username).to.be.equal(newUsername)
+      expect(data.metadata).to.be.equal(metadata)
     })
 
     it('reverts when commit & reveal before allowed', async function() {
@@ -554,7 +620,7 @@ describe('Avatars', function() {
       let allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
 
-      const { logs } = await avatarsContract.setAllowance(user, true, fromOwner)
+      const { logs } = await avatarsContract.setAllowed(user, true, fromOwner)
 
       expect(logs.length).to.be.equal(1)
 
@@ -569,25 +635,25 @@ describe('Avatars', function() {
       expect(allowed).to.be.equal(false)
 
       // Set allowance to user
-      await avatarsContract.setAllowance(user, true, fromOwner)
+      await avatarsContract.setAllowed(user, true, fromOwner)
 
       allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(true)
 
       // Set allowance to another user
-      await avatarsContract.setAllowance(anotherUser, true, fromUser)
+      await avatarsContract.setAllowed(anotherUser, true, fromUser)
 
       allowed = await avatarsContract.allowed(anotherUser)
       expect(allowed).to.be.equal(true)
 
       // Remove allowance to user
-      await avatarsContract.setAllowance(user, false, fromAnotherUser)
+      await avatarsContract.setAllowed(user, false, fromAnotherUser)
 
       allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
 
       // Remove allowance to another user
-      const receipt = await avatarsContract.setAllowance(
+      const receipt = await avatarsContract.setAllowed(
         anotherUser,
         false,
         fromOwner
@@ -607,14 +673,14 @@ describe('Avatars', function() {
 
     it('reverts when trying to manage your own role', async function() {
       await assertRevert(
-        avatarsContract.setAllowance(owner, false, fromOwner),
+        avatarsContract.setAllowed(owner, false, fromOwner),
         'You can not manage your role'
       )
     })
 
     it('reverts when trying to allow an account by not an allowed account', async function() {
       await assertRevert(
-        avatarsContract.setAllowance(anotherUser, true, fromUser),
+        avatarsContract.setAllowed(anotherUser, true, fromUser),
         'The sender is not allowed to register a username'
       )
     })
