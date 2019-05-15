@@ -1,4 +1,64 @@
 
+// File: zos-lib/contracts/Initializable.sol
+
+pragma solidity >=0.4.24 <0.6.0;
+
+
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+  /**
+   * @dev Indicates that the contract has been initialized.
+   */
+  bool private initialized;
+
+  /**
+   * @dev Indicates that the contract is in the process of being initialized.
+   */
+  bool private initializing;
+
+  /**
+   * @dev Modifier to use in the initializer function of a contract.
+   */
+  modifier initializer() {
+    require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+    bool wasInitializing = initializing;
+    initializing = true;
+    initialized = true;
+
+    _;
+
+    initializing = wasInitializing;
+  }
+
+  /// @dev Returns true if and only if the function is running in the constructor
+  function isConstructor() private view returns (bool) {
+    // extcodesize checks the size of the code stored in an address, and
+    // address returns the current address. Since the code is still not
+    // deployed when running a constructor, any checks on its code size will
+    // yield zero, making it an effective way to detect if a contract is
+    // under construction or not.
+    uint256 cs;
+    assembly { cs := extcodesize(address) }
+    return cs == 0;
+  }
+
+  // Reserved storage space to allow for layout changes in the future.
+  uint256[50] private ______gap;
+}
+
 // File: contracts/AvatarsStorage.sol
 
 pragma solidity ^0.5.0;
@@ -11,9 +71,10 @@ contract ERC20Interface {
 }
 
 contract AvatarsStorage {
+    // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
-    uint256 public price = 100000000000000000000; // 100 in wei
+    uint256 public price;
 
     struct Data {
         string userId;
@@ -35,6 +96,7 @@ contract AvatarsStorage {
     // Stores account roles
     mapping (address => bool) public allowed;
 
+    // Events
     event Register(
         address indexed _owner,
         string _userId,
@@ -53,20 +115,26 @@ contract AvatarsStorage {
 pragma solidity ^0.5.0;
 
 
-contract UsernameRegistry is AvatarsStorage {
+
+
+contract UsernameRegistry is Initializable, AvatarsStorage {
 
     /**
-    * @dev Constructor of the contract
+    * @dev Initializer of the contract
     * @param _mana - address of the mana token
-    * @param _blocksUntilReveal - uint256 for the blcoks that should pass before reveal a commit
+    * @param _register - address of the user allowed to register usernames and assign the role
+    * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
     */
-    constructor(ERC20Interface _mana, uint256 _blocksUntilReveal) public {
+    function initialize(ERC20Interface _mana, address _register, uint256 _blocksUntilReveal) public initializer {
         require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
+
 
         manaToken = _mana;
         blocksUntilReveal = _blocksUntilReveal;
+        price = 100000000000000000000; // 100 in wei
+
         // Allow deployer to register usernames
-        allowed[msg.sender] = true;
+        allowed[_register] = true;
     }
 
     /**
@@ -85,7 +153,7 @@ contract UsernameRegistry is AvatarsStorage {
     * @param _account - address of the account to be managed
     * @param _allowed - bool whether the account should be allowed or not
     */
-    function setAllowance(address _account, bool _allowed) external onlyAllowed {
+    function setAllowed(address _account, bool _allowed) external onlyAllowed {
         require(_account != msg.sender, "You can not manage your role");
         allowed[_account] = _allowed;
         emit Allow(msg.sender, _account, _allowed);
@@ -93,7 +161,7 @@ contract UsernameRegistry is AvatarsStorage {
 
     /**
     * @dev Register a usename
-    * @notice that the username should be less or equal than 32 bytes and blanks are not allowed
+    * @notice that the username should be less than or equal 32 bytes and blanks are not allowed
     * @param _beneficiary - address of the account to be managed
     * @param _userId - string for the userid
     * @param _username - string for the username
@@ -162,19 +230,20 @@ contract UsernameRegistry is AvatarsStorage {
 
     /**
     * @dev Commit a hash for a desire username
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _hash - bytes32 of the commit hash
     */
     function commitUsername(bytes32 _hash) public {
         commit[msg.sender].commit = _hash;
         commit[msg.sender].blockNumber = block.number;
+        commit[msg.sender].revealed = false;
 
         emit CommitUsername(msg.sender, _hash, block.number);
     }
 
     /**
     * @dev Reveal a commit
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
@@ -264,7 +333,7 @@ contract UsernameRegistry is AvatarsStorage {
     */
     function _requireUsernameValid(string memory _username) internal pure {
         bytes memory tempUsername = bytes(_username);
-        require(tempUsername.length <= 32, "Username should be less than 32 characters");
+        require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
             require(tempUsername[i] != " ", "No blanks are allowed");
         }

@@ -1,0 +1,223 @@
+{
+  "contracts": {
+    "UsernameRegistry": {
+      "address": "0x46b418D452c3cD4F30215c38549c1a4b95D99DF1",
+      "constructorCode": "608060405234801561001057600080fd5b506121af806100206000396000f3fe",
+      "bodyBytecodeHash": "76fada62c11235a34db91f64a1d3e7d900b420036e403c8ed17b5ba5e2d4428d",
+      "localBytecodeHash": "82bc21971580a535cae78cf70c1924de1890583bece1812e8ec6cbbd1a853abe",
+      "deployedBytecodeHash": "82bc21971580a535cae78cf70c1924de1890583bece1812e8ec6cbbd1a853abe",
+      "types": {
+        "t_bool": {
+          "id": "t_bool",
+          "kind": "elementary",
+          "label": "bool"
+        },
+        "t_uint256": {
+          "id": "t_uint256",
+          "kind": "elementary",
+          "label": "uint256"
+        },
+        "t_array:50<t_uint256>": {
+          "id": "t_array:50<t_uint256>",
+          "valueType": "t_uint256",
+          "length": "50",
+          "kind": "array",
+          "label": "uint256[50]"
+        },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
+        "t_struct<AvatarsStorage.Commit>": {
+          "id": "t_struct<AvatarsStorage.Commit>",
+          "kind": "struct",
+          "label": "AvatarsStorage.Commit",
+          "members": [
+            {
+              "label": "commit",
+              "astId": 547,
+              "type": "t_bytes32",
+              "src": "591:14:1"
+            },
+            {
+              "label": "blockNumber",
+              "astId": 549,
+              "type": "t_uint256",
+              "src": "615:19:1"
+            },
+            {
+              "label": "revealed",
+              "astId": 551,
+              "type": "t_bool",
+              "src": "644:13:1"
+            }
+          ]
+        },
+        "t_bytes32": {
+          "id": "t_bytes32",
+          "kind": "elementary",
+          "label": "bytes32"
+        },
+        "t_mapping<t_struct<AvatarsStorage.Commit>>": {
+          "id": "t_mapping<t_struct<AvatarsStorage.Commit>>",
+          "valueType": "t_struct<AvatarsStorage.Commit>",
+          "label": "mapping(key => AvatarsStorage.Commit)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_address>": {
+          "id": "t_mapping<t_address>",
+          "valueType": "t_address",
+          "label": "mapping(key => address)",
+          "kind": "mapping"
+        },
+        "t_struct<AvatarsStorage.Data>": {
+          "id": "t_struct<AvatarsStorage.Data>",
+          "kind": "struct",
+          "label": "AvatarsStorage.Data",
+          "members": [
+            {
+              "label": "userId",
+              "astId": 540,
+              "type": "t_string",
+              "src": "492:13:1"
+            },
+            {
+              "label": "username",
+              "astId": 542,
+              "type": "t_string",
+              "src": "515:15:1"
+            },
+            {
+              "label": "metadata",
+              "astId": 544,
+              "type": "t_string",
+              "src": "540:15:1"
+            }
+          ]
+        },
+        "t_string": {
+          "id": "t_string",
+          "kind": "elementary",
+          "label": "string"
+        },
+        "t_mapping<t_struct<AvatarsStorage.Data>>": {
+          "id": "t_mapping<t_struct<AvatarsStorage.Data>>",
+          "valueType": "t_struct<AvatarsStorage.Data>",
+          "label": "mapping(key => AvatarsStorage.Data)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_bool>": {
+          "id": "t_mapping<t_bool>",
+          "valueType": "t_bool",
+          "label": "mapping(key => bool)",
+          "kind": "mapping"
+        }
+      },
+      "storage": [
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initialized",
+          "astId": 672,
+          "type": "t_bool",
+          "src": "757:24:3"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initializing",
+          "astId": 674,
+          "type": "t_bool",
+          "src": "876:25:3"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "______gap",
+          "astId": 723,
+          "type": "t_array:50<t_uint256>",
+          "src": "1891:29:3"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "manaToken",
+          "astId": 534,
+          "type": "t_address",
+          "src": "368:31:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "blocksUntilReveal",
+          "astId": 536,
+          "type": "t_uint256",
+          "src": "405:32:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "price",
+          "astId": 538,
+          "type": "t_uint256",
+          "src": "443:20:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "commit",
+          "astId": 556,
+          "type": "t_mapping<t_struct<AvatarsStorage.Commit>>",
+          "src": "712:41:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "usernames",
+          "astId": 560,
+          "type": "t_mapping<t_address>",
+          "src": "788:37:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "user",
+          "astId": 564,
+          "type": "t_mapping<t_struct<AvatarsStorage.Data>>",
+          "src": "858:37:1"
+        },
+        {
+          "contract": "AvatarsStorage",
+          "path": "contracts/AvatarsStorage.sol",
+          "label": "allowed",
+          "astId": 568,
+          "type": "t_mapping<t_bool>",
+          "src": "929:40:1"
+        }
+      ],
+      "warnings": {
+        "hasConstructor": false,
+        "hasSelfDestruct": false,
+        "hasDelegateCall": false,
+        "hasInitialValuesInDeclarations": false,
+        "uninitializedBaseContracts": []
+      }
+    }
+  },
+  "solidityLibs": {},
+  "proxies": {
+    "Avatars/UsernameRegistry": [
+      {
+        "address": "0xE99574137CF1456576e6071E48e64627399Da93c",
+        "version": "0.1.0",
+        "implementation": "0x46b418D452c3cD4F30215c38549c1a4b95D99DF1"
+      }
+    ]
+  },
+  "zosversion": "2.2",
+  "version": "0.1.0",
+  "proxyAdmin": {
+    "address": "0x776B7D7C10647B3a08501Ee7Ba22090D3812ff8C"
+  }
+}

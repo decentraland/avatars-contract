@@ -15,8 +15,11 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     function initialize(ERC20Interface _mana, address _register, uint256 _blocksUntilReveal) public initializer {
         require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
 
+
         manaToken = _mana;
         blocksUntilReveal = _blocksUntilReveal;
+        price = 100000000000000000000; // 100 in wei
+
         // Allow deployer to register usernames
         allowed[_register] = true;
     }
@@ -37,7 +40,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @param _account - address of the account to be managed
     * @param _allowed - bool whether the account should be allowed or not
     */
-    function setAllowance(address _account, bool _allowed) external onlyAllowed {
+    function setAllowed(address _account, bool _allowed) external onlyAllowed {
         require(_account != msg.sender, "You can not manage your role");
         allowed[_account] = _allowed;
         emit Allow(msg.sender, _account, _allowed);
@@ -45,7 +48,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
 
     /**
     * @dev Register a usename
-    * @notice that the username should be less or equal than 32 bytes and blanks are not allowed
+    * @notice that the username should be less than or equal 32 bytes and blanks are not allowed
     * @param _beneficiary - address of the account to be managed
     * @param _userId - string for the userid
     * @param _username - string for the username
@@ -114,19 +117,20 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
 
     /**
     * @dev Commit a hash for a desire username
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _hash - bytes32 of the commit hash
     */
     function commitUsername(bytes32 _hash) public {
         commit[msg.sender].commit = _hash;
         commit[msg.sender].blockNumber = block.number;
+        commit[msg.sender].revealed = false;
 
         emit CommitUsername(msg.sender, _hash, block.number);
     }
 
     /**
     * @dev Reveal a commit
-    * @notice that the reveal should happend after the blocks defined on {blocksUntilReveal}
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
@@ -216,7 +220,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     */
     function _requireUsernameValid(string memory _username) internal pure {
         bytes memory tempUsername = bytes(_username);
-        require(tempUsername.length <= 32, "Username should be less than 32 characters");
+        require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
             require(tempUsername[i] != " ", "No blanks are allowed");
         }

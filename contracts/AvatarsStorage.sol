@@ -8,9 +8,10 @@ contract ERC20Interface {
 }
 
 contract AvatarsStorage {
+    // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
-    uint256 public price = 100000000000000000000; // 100 in wei
+    uint256 public price;
 
     struct Data {
         string userId;
@@ -32,6 +33,7 @@ contract AvatarsStorage {
     // Stores account roles
     mapping (address => bool) public allowed;
 
+    // Events
     event Register(
         address indexed _owner,
         string _userId,
