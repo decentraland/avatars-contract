@@ -71,6 +71,7 @@ contract ERC20Interface {
 }
 
 contract AvatarsStorage {
+    // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
     uint256 public price;
@@ -95,6 +96,7 @@ contract AvatarsStorage {
     // Stores account roles
     mapping (address => bool) public allowed;
 
+    // Events
     event Register(
         address indexed _owner,
         string _userId,
