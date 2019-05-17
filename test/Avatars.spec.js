@@ -14,9 +14,9 @@ describe('Avatars', function() {
   // globals
   const EMPTY_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const userId = 'guest_1234'
-  const username = 'imazzara'
+  const username = 'ignacio'
   const metadata = 'the metadata'
+  const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
   const blocksUntilReveal = 10
   let creationParams
 
@@ -38,13 +38,11 @@ describe('Avatars', function() {
     _log,
     _owner,
     _caller = owner,
-    _userId = userId,
     _username = username,
     _metadata = metadata
   ) {
     expect(_log.event).to.be.equal('Register')
     expect(_log.args._owner).to.be.equal(_owner)
-    expect(_log.args._userId).to.be.equal(_userId)
     expect(_log.args._username).to.be.equal(_username)
     expect(_log.args._metadata).to.be.equal(_metadata)
     expect(_log.args._caller).to.be.equal(_caller)
@@ -107,13 +105,11 @@ describe('Avatars', function() {
     it('should register a username', async function() {
       // Check user data
       let data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal('')
       expect(data.username).to.be.equal('')
       expect(data.metadata).to.be.equal('')
 
       const { logs } = await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         metadata,
         fromOwner
@@ -125,7 +121,6 @@ describe('Avatars', function() {
 
       // Check user data
       data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
     })
@@ -135,7 +130,6 @@ describe('Avatars', function() {
 
       await avatarsContract.registerUsername(
         anotherUser,
-        userId,
         username,
         metadata,
         fromUser
@@ -143,7 +137,6 @@ describe('Avatars', function() {
 
       // Check user data
       const data = await avatarsContract.user(anotherUser)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
     })
@@ -154,7 +147,6 @@ describe('Avatars', function() {
 
       await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         metadata,
         fromOwner
@@ -170,7 +162,6 @@ describe('Avatars', function() {
 
       await avatarsContract.registerUsername(
         user,
-        userId,
         newUsername,
         metadata,
         fromOwner
@@ -183,7 +174,6 @@ describe('Avatars', function() {
     it('should change the username', async function() {
       await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         metadata,
         fromOwner
@@ -191,29 +181,20 @@ describe('Avatars', function() {
 
       // Check user data
       let data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
 
       const newUsername = username + '_v2'
-      await avatarsContract.registerUsername(
-        user,
-        userId,
-        newUsername,
-        '',
-        fromOwner
-      )
+      await avatarsContract.registerUsername(user, newUsername, '', fromOwner)
 
       // Check user data
       data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(newUsername)
       expect(data.metadata).to.be.equal(metadata)
 
       const newMetadata = metadata + '_v2'
       await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         newMetadata,
         fromOwner
@@ -221,7 +202,6 @@ describe('Avatars', function() {
 
       // Check user data
       data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(newMetadata)
     })
@@ -229,7 +209,6 @@ describe('Avatars', function() {
     it('reverts when registering an already used username', async function() {
       await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         metadata,
         fromOwner
@@ -237,13 +216,7 @@ describe('Avatars', function() {
 
       // Same user
       await assertRevert(
-        avatarsContract.registerUsername(
-          user,
-          userId,
-          username,
-          metadata,
-          fromOwner
-        ),
+        avatarsContract.registerUsername(user, username, metadata, fromOwner),
         'The username was already taken'
       )
 
@@ -251,7 +224,6 @@ describe('Avatars', function() {
       await assertRevert(
         avatarsContract.registerUsername(
           anotherUser,
-          userId,
           username,
           metadata,
           fromOwner
@@ -262,13 +234,7 @@ describe('Avatars', function() {
 
     it('reverts when a not allowed account trying to register a username', async function() {
       await assertRevert(
-        avatarsContract.registerUsername(
-          user,
-          userId,
-          username,
-          metadata,
-          fromUser
-        ),
+        avatarsContract.registerUsername(user, username, metadata, fromUser),
         'The sender is not allowed to register a username'
       )
     })
@@ -277,7 +243,6 @@ describe('Avatars', function() {
       const validUsername = 'this_username_is_very_very_tight'
       await avatarsContract.registerUsername(
         user,
-        userId,
         validUsername,
         metadata,
         fromOwner
@@ -287,7 +252,6 @@ describe('Avatars', function() {
       await assertRevert(
         avatarsContract.registerUsername(
           user,
-          userId,
           bigUsername,
           metadata,
           fromOwner
@@ -302,7 +266,6 @@ describe('Avatars', function() {
       await assertRevert(
         avatarsContract.registerUsername(
           user,
-          userId,
           usernameWithBlanks,
           metadata,
           fromOwner
@@ -312,28 +275,22 @@ describe('Avatars', function() {
     })
   })
 
-  describe('commit & reveal', function() {
+  describe('Commit & Reveal', function() {
     let hash
 
     beforeEach(async function() {
-      hash = await avatarsContract.getHash(userId, username, metadata, fromUser)
+      hash = await avatarsContract.getHash(username, metadata, salt, fromUser)
     })
 
     it('should match solidity hash with web3 hash', async function() {
       // Remove 0x
       const contractAddress = avatarsContract.address.toLowerCase().slice(2)
-      const userAddress = user.toLowerCase().slice(2)
-      const hexUserId = web3.utils.toHex(userId).slice(2)
       const hexUsername = web3.utils.toHex(username).slice(2)
       const hexMetadata = web3.utils.toHex(metadata).slice(2)
+      const userSalt = salt.slice(2)
 
       const web3Hash = web3.utils.keccak256(
-        '0x' +
-          contractAddress +
-          userAddress +
-          hexUserId +
-          hexUsername +
-          hexMetadata
+        '0x' + contractAddress + hexUsername + hexMetadata + userSalt
       )
 
       expect(web3Hash).to.be.equal(hash)
@@ -348,9 +305,9 @@ describe('Avatars', function() {
       expect(userCommit.revealed).to.eq.BN(false)
 
       const hash = await avatarsContract.getHash(
-        userId,
         username,
         metadata,
+        salt,
         fromUser
       )
 
@@ -388,9 +345,9 @@ describe('Avatars', function() {
       await increaseBlocks(blocksUntilReveal)
 
       const { logs } = await avatarsContract.revealUsername(
-        userId,
         username,
         metadata,
+        salt,
         fromUser
       )
       const revealBlockNumber = (await web3.eth.getBlock('latest')).number
@@ -408,7 +365,6 @@ describe('Avatars', function() {
 
       // Check user data
       const data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
 
@@ -424,35 +380,35 @@ describe('Avatars', function() {
 
       await increaseBlocks(blocksUntilReveal - 1)
       await assertRevert(
-        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
 
       const newUsername = username + 'v2'
       const newHash = await avatarsContract.getHash(
-        userId,
         newUsername,
         metadata,
+        salt,
         fromUser
       )
       await avatarsContract.commitUsername(newHash, fromUser)
 
       await increaseBlocks(1)
       await assertRevert(
-        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Revealed hash does not match commit'
       )
       await assertRevert(
-        avatarsContract.revealUsername(userId, newUsername, metadata, fromUser),
+        avatarsContract.revealUsername(newUsername, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
 
       await increaseBlocks(blocksUntilReveal)
 
       await avatarsContract.revealUsername(
-        userId,
         newUsername,
         metadata,
+        salt,
         fromUser
       )
     })
@@ -460,28 +416,26 @@ describe('Avatars', function() {
     it('should update username', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(userId, username, metadata, fromUser)
+      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
 
       // Check user data
       let data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
 
       const newUsername = username + 'v2'
       const newHash = await avatarsContract.getHash(
-        userId,
         newUsername,
         '',
+        salt,
         fromUser
       )
       await avatarsContract.commitUsername(newHash, fromUser)
 
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(userId, newUsername, '', fromUser)
+      await avatarsContract.revealUsername(newUsername, '', salt, fromUser)
 
       data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(newUsername)
       expect(data.metadata).to.be.equal(metadata)
     })
@@ -492,7 +446,7 @@ describe('Avatars', function() {
       await increaseBlocks(blocksUntilReveal - 1)
 
       await assertRevert(
-        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
     })
@@ -503,9 +457,31 @@ describe('Avatars', function() {
       const alteredUsername = `${username} `
       await assertRevert(
         avatarsContract.revealUsername(
-          userId,
           alteredUsername,
           metadata,
+          salt,
+          fromUser
+        ),
+        'Revealed hash does not match commit'
+      )
+
+      const alteredMetadata = `${metadata} `
+      await assertRevert(
+        avatarsContract.revealUsername(
+          username,
+          alteredMetadata,
+          salt,
+          fromUser
+        ),
+        'Revealed hash does not match commit'
+      )
+
+      const alteredSalt = web3.utils.randomHex(32)
+      await assertRevert(
+        avatarsContract.revealUsername(
+          username,
+          metadata,
+          alteredSalt,
           fromUser
         ),
         'Revealed hash does not match commit'
@@ -515,10 +491,10 @@ describe('Avatars', function() {
     it('reverts when revealing an already revealed commit', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(userId, username, metadata, fromUser)
+      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
 
       await assertRevert(
-        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Commit was already revealed'
       )
     })
@@ -530,24 +506,21 @@ describe('Avatars', function() {
 
       await avatarsContract.registerUsername(
         anotherUser,
-        userId,
         username,
         metadata,
         fromOwner
       )
 
       await assertRevert(
-        avatarsContract.revealUsername(userId, username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'The username was already taken'
       )
 
       let data = await avatarsContract.user(anotherUser)
-      expect(data.userId).to.be.equal(userId)
       expect(data.username).to.be.equal(username)
       expect(data.metadata).to.be.equal(metadata)
 
       data = await avatarsContract.user(user)
-      expect(data.userId).to.be.equal('')
       expect(data.username).to.be.equal('')
       expect(data.metadata).to.be.equal('')
     })
@@ -559,9 +532,9 @@ describe('Avatars', function() {
 
       await assertRevert(
         avatarsContract.revealUsername(
-          userId,
           username,
           metadata,
+          salt,
           fromAnotherUser
         ),
         'User has not a commit to be revealed'
@@ -575,7 +548,6 @@ describe('Avatars', function() {
     it('should change metadata', async function() {
       await avatarsContract.registerUsername(
         user,
-        userId,
         username,
         metadata,
         fromOwner

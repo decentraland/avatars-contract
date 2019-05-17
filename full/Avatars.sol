@@ -77,7 +77,6 @@ contract AvatarsStorage {
     uint256 public price;
 
     struct Data {
-        string userId;
         string username;
         string metadata;
     }
@@ -99,7 +98,6 @@ contract AvatarsStorage {
     // Events
     event Register(
         address indexed _owner,
-        string _userId,
         string _username,
         string _metadata,
         address indexed _caller
@@ -163,13 +161,11 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @dev Register a usename
     * @notice that the username should be less than or equal 32 bytes and blanks are not allowed
     * @param _beneficiary - address of the account to be managed
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     */
     function _registerUsername(
         address _beneficiary,
-        string memory _userId,
         string memory _username,
         string memory _metadata
     )
@@ -191,7 +187,6 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
         delete usernames[data.username];
 
         // Set data
-        data.userId = _userId;
         data.username = _username;
 
         bytes memory metadata = bytes(_metadata);
@@ -201,7 +196,6 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
 
         emit Register(
             _beneficiary,
-            _userId,
             _username,
             data.metadata,
             msg.sender
@@ -212,20 +206,18 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @dev Register a usename
     * @notice that the username can only be registered by an allowed account
     * @param _beneficiary - address of the account to be managed
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     */
     function registerUsername(
         address _beneficiary,
-        string calldata _userId,
         string calldata _username,
         string calldata _metadata
     )
     external
     onlyAllowed
     {
-        _registerUsername(_beneficiary, _userId, _username, _metadata);
+        _registerUsername(_beneficiary, _username, _metadata);
     }
 
     /**
@@ -244,14 +236,14 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     /**
     * @dev Reveal a commit
     * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     */
     function revealUsername(
-        string memory _userId,
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public
     {
@@ -260,7 +252,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
         require(userCommit.commit != 0, "User has not a commit to be revealed");
         require(userCommit.revealed == false, "Commit was already revealed");
         require(
-            getHash(_userId, _username, _metadata) == userCommit.commit,
+            getHash(_username, _metadata, _salt) == userCommit.commit,
             "Revealed hash does not match commit"
         );
         require(
@@ -272,27 +264,27 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
 
         emit RevealUsername(msg.sender, userCommit.commit, block.number);
 
-        _registerUsername(msg.sender, _userId, _username, _metadata);
+        _registerUsername(msg.sender, _username, _metadata);
     }
 
     /**
     * @dev Return a bytes32 hash for the given arguments
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     * @return bytes32 - for the hash of the given arguments
     */
     function getHash(
-        string memory _userId,
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public
     view
     returns (bytes32)
     {
         return keccak256(
-            abi.encodePacked(address(this), msg.sender, _userId, _username, _metadata)
+            abi.encodePacked(address(this), _username, _metadata, _salt)
         );
     }
 
