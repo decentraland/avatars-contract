@@ -7,7 +7,7 @@ contract ERC20Interface {
     function burn(uint256 amount) public;
 }
 
-contract AvatarsStorage {
+contract AvatarNameStorage {
     // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;

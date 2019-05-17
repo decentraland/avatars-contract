@@ -59,7 +59,7 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts/AvatarsStorage.sol
+// File: contracts/AvatarNameStorage.sol
 
 pragma solidity ^0.5.0;
 
@@ -70,7 +70,7 @@ contract ERC20Interface {
     function burn(uint256 amount) public;
 }
 
-contract AvatarsStorage {
+contract AvatarNameStorage {
     // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
@@ -108,14 +108,14 @@ contract AvatarsStorage {
     event RevealUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
 }
 
-// File: contracts/Avatars.sol
+// File: contracts/AvatarNameRegistry.sol
 
 pragma solidity ^0.5.0;
 
 
 
 
-contract UsernameRegistry is Initializable, AvatarsStorage {
+contract AvatarNameRegistry is Initializable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
@@ -123,7 +123,13 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @param _register - address of the user allowed to register usernames and assign the role
     * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
     */
-    function initialize(ERC20Interface _mana, address _register, uint256 _blocksUntilReveal) public initializer {
+    function initialize(
+        ERC20Interface _mana,
+        address _register,
+        uint256 _blocksUntilReveal
+    )
+    public initializer
+    {
         require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
 
 

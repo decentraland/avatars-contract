@@ -3,6 +3,6 @@
   "name": "Avatars",
   "version": "0.1.0",
   "contracts": {
-    "UsernameRegistry": "UsernameRegistry"
+    "AvatarNameRegistry": "AvatarNameRegistry"
   }
 }
