@@ -14,7 +14,6 @@ contract AvatarsStorage {
     uint256 public price;
 
     struct Data {
-        string userId;
         string username;
         string metadata;
     }
@@ -36,7 +35,6 @@ contract AvatarsStorage {
     // Events
     event Register(
         address indexed _owner,
-        string _userId,
         string _username,
         string _metadata,
         address indexed _caller

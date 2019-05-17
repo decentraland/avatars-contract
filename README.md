@@ -16,7 +16,6 @@ contract AvatarsStorage {
     uint256 public price = 100000000000000000000; // 100 in wei
 
     struct Data {
-        string userId;
         string username;
         string metadata;
     }
@@ -37,7 +36,6 @@ contract AvatarsStorage {
 
     event Register(
         address indexed _owner,
-        string _userId,
         string _username,
         string _metadata,
         address indexed _caller
@@ -51,7 +49,7 @@ contract AvatarsStorage {
 
 ## Implementation
 
-```
+```solidity
 contract UsernameRegistry is AvatarsStorage {
 
     /**
@@ -77,13 +75,11 @@ contract UsernameRegistry is AvatarsStorage {
     * @dev Register a usename
     * @notice that the username should be less than or equal 32 bytes and blanks are not allowed
     * @param _beneficiary - address of the account to be managed
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     */
     function _registerUsername(
         address _beneficiary,
-        string memory _userId,
         string memory _username,
         string memory _metadata
     )
@@ -93,13 +89,11 @@ contract UsernameRegistry is AvatarsStorage {
     * @dev Register a usename
     * @notice that the username can only be registered by an allowed account
     * @param _beneficiary - address of the account to be managed
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     */
     function registerUsername(
         address _beneficiary,
-        string calldata _userId,
         string calldata _username,
         string calldata _metadata
     )
@@ -116,12 +110,10 @@ contract UsernameRegistry is AvatarsStorage {
    /**
     * @dev Reveal a commit
     * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     */
     function revealUsername(
-        string memory _userId,
         string memory _username,
         string memory _metadata
     )
@@ -129,13 +121,11 @@ contract UsernameRegistry is AvatarsStorage {
 
     /**
     * @dev Return a bytes32 hash for the given arguments
-    * @param _userId - string for the userid
     * @param _username - string for the username
     * @param _metadata - string for the metadata
     * @return bytes32 - for the hash of the given arguments
     */
     function getHash(
-        string memory _userId,
         string memory _username,
         string memory _metadata
     )
