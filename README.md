@@ -1,4 +1,4 @@
-# Avatars Username Contract
+# Avatars Name Contract
 
 ## Storage
 
@@ -10,7 +10,7 @@ contract ERC20Interface {
     function burn(uint256 amount) public;
 }
 
-contract AvatarsStorage {
+contract AvatarNameStorage {
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
     uint256 public price = 100000000000000000000; // 100 in wei
@@ -50,7 +50,7 @@ contract AvatarsStorage {
 ## Implementation
 
 ```solidity
-contract UsernameRegistry is AvatarsStorage {
+contract AvatarNameRegistry is Initializable, AvatarNameStorage {
 
     /**
     * @dev Constructor of the contract

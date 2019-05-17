@@ -1,6 +1,6 @@
 #! /bin/bash
 
-AVATARS=Avatars.sol
+AVATARS=AvatarNameRegistry.sol
 
 OUTPUT=full
 

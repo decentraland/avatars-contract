@@ -6,7 +6,7 @@ import { increaseBlocks } from './helpers/increase'
 const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
 
-const Avatars = artifacts.require('UsernameRegistry')
+const Avatars = artifacts.require('AvatarNameRegistry')
 
 describe('Avatars', function() {
   this.timeout(100000)
@@ -17,6 +17,7 @@ describe('Avatars', function() {
   const username = 'ignacio'
   const metadata = 'the metadata'
   const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
+
   const blocksUntilReveal = 10
   let creationParams
 

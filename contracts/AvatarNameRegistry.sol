@@ -1,10 +1,10 @@
 pragma solidity ^0.5.0;
 
 import "zos-lib/contracts/Initializable.sol";
-import "./AvatarsStorage.sol";
+import "./AvatarNameStorage.sol";
 
 
-contract UsernameRegistry is Initializable, AvatarsStorage {
+contract AvatarNameRegistry is Initializable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
@@ -12,7 +12,13 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @param _register - address of the user allowed to register usernames and assign the role
     * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
     */
-    function initialize(ERC20Interface _mana, address _register, uint256 _blocksUntilReveal) public initializer {
+    function initialize(
+        ERC20Interface _mana,
+        address _register,
+        uint256 _blocksUntilReveal
+    )
+    public initializer
+    {
         require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
 
 
