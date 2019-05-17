@@ -173,7 +173,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     returns (bytes32)
     {
         return keccak256(
-            abi.encodePacked(address(this), msg.sender, _username, _metadata, _salt)
+            abi.encodePacked(address(this), _username, _metadata, _salt)
         );
     }
 

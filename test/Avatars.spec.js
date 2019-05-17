@@ -14,7 +14,7 @@ describe('Avatars', function() {
   // globals
   const EMPTY_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const username = 'imazzara'
+  const username = 'ignacio'
   const metadata = 'the metadata'
   const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
   const blocksUntilReveal = 10
@@ -285,18 +285,12 @@ describe('Avatars', function() {
     it('should match solidity hash with web3 hash', async function() {
       // Remove 0x
       const contractAddress = avatarsContract.address.toLowerCase().slice(2)
-      const userAddress = user.toLowerCase().slice(2)
       const hexUsername = web3.utils.toHex(username).slice(2)
       const hexMetadata = web3.utils.toHex(metadata).slice(2)
       const userSalt = salt.slice(2)
 
       const web3Hash = web3.utils.keccak256(
-        '0x' +
-          contractAddress +
-          userAddress +
-          hexUsername +
-          hexMetadata +
-          userSalt
+        '0x' + contractAddress + hexUsername + hexMetadata + userSalt
       )
 
       expect(web3Hash).to.be.equal(hash)
