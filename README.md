@@ -112,10 +112,12 @@ contract UsernameRegistry is AvatarsStorage {
     * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     */
     function revealUsername(
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public;
 
@@ -123,11 +125,13 @@ contract UsernameRegistry is AvatarsStorage {
     * @dev Return a bytes32 hash for the given arguments
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     * @return bytes32 - for the hash of the given arguments
     */
     function getHash(
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public
     view

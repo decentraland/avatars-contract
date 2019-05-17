@@ -127,10 +127,12 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     */
     function revealUsername(
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public
     {
@@ -139,7 +141,7 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
         require(userCommit.commit != 0, "User has not a commit to be revealed");
         require(userCommit.revealed == false, "Commit was already revealed");
         require(
-            getHash(_username, _metadata) == userCommit.commit,
+            getHash(_username, _metadata, _salt) == userCommit.commit,
             "Revealed hash does not match commit"
         );
         require(
@@ -158,18 +160,20 @@ contract UsernameRegistry is Initializable, AvatarsStorage {
     * @dev Return a bytes32 hash for the given arguments
     * @param _username - string for the username
     * @param _metadata - string for the metadata
+    * @param _salt - bytes32 for the salt
     * @return bytes32 - for the hash of the given arguments
     */
     function getHash(
         string memory _username,
-        string memory _metadata
+        string memory _metadata,
+        bytes32 _salt
     )
     public
     view
     returns (bytes32)
     {
         return keccak256(
-            abi.encodePacked(address(this), msg.sender, _username, _metadata)
+            abi.encodePacked(address(this), msg.sender, _username, _metadata, _salt)
         );
     }
 

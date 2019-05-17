@@ -16,6 +16,7 @@ describe('Avatars', function() {
     '0x0000000000000000000000000000000000000000000000000000000000000000'
   const username = 'imazzara'
   const metadata = 'the metadata'
+  const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
   const blocksUntilReveal = 10
   let creationParams
 
@@ -274,11 +275,11 @@ describe('Avatars', function() {
     })
   })
 
-  describe('commit & reveal', function() {
+  describe('Commit & Reveal', function() {
     let hash
 
     beforeEach(async function() {
-      hash = await avatarsContract.getHash(username, metadata, fromUser)
+      hash = await avatarsContract.getHash(username, metadata, salt, fromUser)
     })
 
     it('should match solidity hash with web3 hash', async function() {
@@ -287,9 +288,15 @@ describe('Avatars', function() {
       const userAddress = user.toLowerCase().slice(2)
       const hexUsername = web3.utils.toHex(username).slice(2)
       const hexMetadata = web3.utils.toHex(metadata).slice(2)
+      const userSalt = salt.slice(2)
 
       const web3Hash = web3.utils.keccak256(
-        '0x' + contractAddress + userAddress + hexUsername + hexMetadata
+        '0x' +
+          contractAddress +
+          userAddress +
+          hexUsername +
+          hexMetadata +
+          userSalt
       )
 
       expect(web3Hash).to.be.equal(hash)
@@ -303,7 +310,12 @@ describe('Avatars', function() {
       expect(userCommit.blockNumber).to.eq.BN(0)
       expect(userCommit.revealed).to.eq.BN(false)
 
-      const hash = await avatarsContract.getHash(username, metadata, fromUser)
+      const hash = await avatarsContract.getHash(
+        username,
+        metadata,
+        salt,
+        fromUser
+      )
 
       const { logs } = await avatarsContract.commitUsername(hash, fromUser)
       const blockNumber = (await web3.eth.getBlock('latest')).number
@@ -341,6 +353,7 @@ describe('Avatars', function() {
       const { logs } = await avatarsContract.revealUsername(
         username,
         metadata,
+        salt,
         fromUser
       )
       const revealBlockNumber = (await web3.eth.getBlock('latest')).number
@@ -373,7 +386,7 @@ describe('Avatars', function() {
 
       await increaseBlocks(blocksUntilReveal - 1)
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
 
@@ -381,29 +394,35 @@ describe('Avatars', function() {
       const newHash = await avatarsContract.getHash(
         newUsername,
         metadata,
+        salt,
         fromUser
       )
       await avatarsContract.commitUsername(newHash, fromUser)
 
       await increaseBlocks(1)
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Revealed hash does not match commit'
       )
       await assertRevert(
-        avatarsContract.revealUsername(newUsername, metadata, fromUser),
+        avatarsContract.revealUsername(newUsername, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
 
       await increaseBlocks(blocksUntilReveal)
 
-      await avatarsContract.revealUsername(newUsername, metadata, fromUser)
+      await avatarsContract.revealUsername(
+        newUsername,
+        metadata,
+        salt,
+        fromUser
+      )
     })
 
     it('should update username', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(username, metadata, fromUser)
+      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
 
       // Check user data
       let data = await avatarsContract.user(user)
@@ -411,11 +430,16 @@ describe('Avatars', function() {
       expect(data.metadata).to.be.equal(metadata)
 
       const newUsername = username + 'v2'
-      const newHash = await avatarsContract.getHash(newUsername, '', fromUser)
+      const newHash = await avatarsContract.getHash(
+        newUsername,
+        '',
+        salt,
+        fromUser
+      )
       await avatarsContract.commitUsername(newHash, fromUser)
 
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(newUsername, '', fromUser)
+      await avatarsContract.revealUsername(newUsername, '', salt, fromUser)
 
       data = await avatarsContract.user(user)
       expect(data.username).to.be.equal(newUsername)
@@ -428,7 +452,7 @@ describe('Avatars', function() {
       await increaseBlocks(blocksUntilReveal - 1)
 
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Reveal can not be done before blocks passed'
       )
     })
@@ -438,7 +462,34 @@ describe('Avatars', function() {
 
       const alteredUsername = `${username} `
       await assertRevert(
-        avatarsContract.revealUsername(alteredUsername, metadata, fromUser),
+        avatarsContract.revealUsername(
+          alteredUsername,
+          metadata,
+          salt,
+          fromUser
+        ),
+        'Revealed hash does not match commit'
+      )
+
+      const alteredMetadata = `${metadata} `
+      await assertRevert(
+        avatarsContract.revealUsername(
+          username,
+          alteredMetadata,
+          salt,
+          fromUser
+        ),
+        'Revealed hash does not match commit'
+      )
+
+      const alteredSalt = web3.utils.randomHex(32)
+      await assertRevert(
+        avatarsContract.revealUsername(
+          username,
+          metadata,
+          alteredSalt,
+          fromUser
+        ),
         'Revealed hash does not match commit'
       )
     })
@@ -446,10 +497,10 @@ describe('Avatars', function() {
     it('reverts when revealing an already revealed commit', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
       await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(username, metadata, fromUser)
+      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
 
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'Commit was already revealed'
       )
     })
@@ -467,7 +518,7 @@ describe('Avatars', function() {
       )
 
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromUser),
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
         'The username was already taken'
       )
 
@@ -486,7 +537,12 @@ describe('Avatars', function() {
       await increaseBlocks(blocksUntilReveal)
 
       await assertRevert(
-        avatarsContract.revealUsername(username, metadata, fromAnotherUser),
+        avatarsContract.revealUsername(
+          username,
+          metadata,
+          salt,
+          fromAnotherUser
+        ),
         'User has not a commit to be revealed'
       )
     })
