@@ -1,6 +1,9 @@
 require('babel-register')
 require('babel-polyfill')
 
+const HDWalletProvider = require('truffle-hdwallet-provider')
+var mnemonic = ''
+
 module.exports = {
   solc: {
     optimizer: {
@@ -40,10 +43,12 @@ module.exports = {
       network_id: '*' // eslint-disable-line camelcase
     },
     mainnet: {
-      host: 'localhost',
-      port: 9545,
+      provider: function() {
+        return new HDWalletProvider(mnemonic, 'https://mainnet.infura.io/')
+      },
+      from: '',
       gas: 6721975,
-      network_id: '1' // eslint-disable-line camelcase
+      gasPrice: 5e9
     }
   }
 }

@@ -1,0 +1,28 @@
+{
+  "contracts": {
+    "AvatarNameRegistry": {
+      "address": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB",
+      "constructorCode": "608060405234801561001057600080fd5b50611f71806100206000396000f3fe",
+      "bodyBytecodeHash": "b65ff14b7adf0dcd5612610e0459b3126541dc7c3cce2f43fd84155e80210301",
+      "localBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
+      "deployedBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
+      "types": null,
+      "storage": null
+    }
+  },
+  "solidityLibs": {},
+  "proxies": {
+    "Avatars/AvatarNameRegistry": [
+      {
+        "address": "0x9CBd5A755cd066a9b5Ff52c350cA501497F57336",
+        "version": "0.1.0",
+        "implementation": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB"
+      }
+    ]
+  },
+  "zosversion": "2.2",
+  "version": "0.1.0",
+  "proxyAdmin": {
+    "address": "0x397E585d3d08450777F2B125e440A7B8eAfb7330"
+  }
+}
