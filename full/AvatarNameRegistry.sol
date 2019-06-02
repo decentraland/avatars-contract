@@ -71,7 +71,6 @@ contract ERC20Interface {
 }
 
 contract AvatarNameStorage {
-    // constants
     // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;

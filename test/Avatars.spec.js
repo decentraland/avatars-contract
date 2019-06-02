@@ -705,4 +705,18 @@ describe('Avatars', function() {
       )
     })
   })
+
+  describe('hasExpired', function() {
+    it('should check if it is expired', async function() {
+      const blockNumber = (await web3.eth.getBlock('latest')).number
+      let hasExpired = await avatarsContract.hasExpired(blockNumber)
+
+      expect(hasExpired).to.be.equal(false)
+
+      await increaseBlocks(blocksUntilReveal + blocksToExpire)
+      hasExpired = await avatarsContract.hasExpired(blockNumber)
+
+      expect(hasExpired).to.be.equal(true)
+    })
+  })
 })
