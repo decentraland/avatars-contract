@@ -227,6 +227,17 @@ describe('Avatars', function() {
       expect(data.metadata).to.be.equal(newMetadata)
     })
 
+    it('accepts blanks', async function() {
+      const usernameWithBlanks = 'this username has blanks'
+
+      await avatarsContract.registerUsername(
+        user,
+        usernameWithBlanks,
+        metadata,
+        fromOwner
+      )
+    })
+
     it('reverts when registering an already used username', async function() {
       await avatarsContract.registerUsername(
         user,
@@ -281,18 +292,42 @@ describe('Avatars', function() {
       )
     })
 
-    it('reverts when username has blanks', async function() {
-      const usernameWithBlanks = 'this username has blanks'
+    it('reverts when the username has invalid character', async function() {
+      // With ascii 0x1f (US)
+      let tx = {
+        from: owner,
+        to: avatarsContract.address,
+        data: `0x88dd45ba000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c1f736461736461736461736400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
+      }
 
-      await assertRevert(
-        avatarsContract.registerUsername(
-          user,
-          usernameWithBlanks,
-          metadata,
-          fromOwner
-        ),
-        'No blanks are allowed'
-      )
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
+
+      // With ascii 0x00 (NULL)
+      tx = {
+        from: owner,
+        to: avatarsContract.address,
+        data: `0x88dd45ba000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c00736461736461736461736400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
+      }
+
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
+
+      // With ascii 0x08 (BACKSPACE)
+      tx = {
+        from: owner,
+        to: avatarsContract.address,
+        data: `0x88dd45ba000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c08736461736461736461736400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
+      }
+
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
     })
   })
 

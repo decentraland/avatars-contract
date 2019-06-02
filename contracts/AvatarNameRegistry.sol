@@ -235,7 +235,7 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
         bytes memory tempUsername = bytes(_username);
         require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
-            require(tempUsername[i] != " ", "No blanks are allowed");
+            require(tempUsername[i] > 0x1f, "Invalid Character");
         }
     }
 

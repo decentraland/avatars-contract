@@ -38,6 +38,12 @@ module.exports = {
       host: 'localhost',
       port: 8555,
       network_id: '*' // eslint-disable-line camelcase
+    },
+    mainnet: {
+      host: 'localhost',
+      port: 9545,
+      gas: 6721975,
+      network_id: '1' // eslint-disable-line camelcase
     }
   }
 }
