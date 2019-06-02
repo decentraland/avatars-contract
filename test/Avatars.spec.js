@@ -19,6 +19,7 @@ describe('Avatars', function() {
   const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
 
   const blocksUntilReveal = 10
+  const blocksToExpire = 10
   let creationParams
 
   // Accounts
@@ -73,7 +74,12 @@ describe('Avatars', function() {
 
     avatarsContract = await Avatars.new(creationParams)
 
-    avatarsContract.initialize(manaContract.address, owner, blocksUntilReveal)
+    avatarsContract.initialize(
+      manaContract.address,
+      owner,
+      blocksUntilReveal,
+      blocksToExpire
+    )
 
     await mana.authorize(avatarsContract.address)
   })
@@ -81,7 +87,12 @@ describe('Avatars', function() {
   describe('Constructor', function() {
     it('should be depoyed with valid arguments', async function() {
       const contract = await Avatars.new(creationParams)
-      await contract.initialize(manaContract.address, owner, blocksUntilReveal)
+      await contract.initialize(
+        manaContract.address,
+        owner,
+        blocksUntilReveal,
+        blocksToExpire
+      )
 
       const mana = await contract.manaToken()
       const canRegister = await contract.allowed(owner)
@@ -96,8 +107,17 @@ describe('Avatars', function() {
       const contract = await Avatars.new(creationParams)
 
       await assertRevert(
-        contract.initialize(manaContract.address, owner, 0),
+        contract.initialize(manaContract.address, owner, 0, blocksToExpire),
         'Blocks until reveal should be greather than 0'
+      )
+    })
+
+    it('reverts when trying to deploy with blocksToExpire = 0', async function() {
+      const contract = await Avatars.new(creationParams)
+
+      await assertRevert(
+        contract.initialize(manaContract.address, owner, blocksUntilReveal, 0),
+        'Blocks to expire should be greather than 0'
       )
     })
   })
@@ -441,6 +461,14 @@ describe('Avatars', function() {
       expect(data.metadata).to.be.equal(metadata)
     })
 
+    it('should commit an already commited hash after expired', async function() {
+      await avatarsContract.commitUsername(hash, fromUser)
+
+      await increaseBlocks(blocksUntilReveal + blocksToExpire)
+
+      await avatarsContract.commitUsername(hash, fromUser)
+    })
+
     it('reverts when commit & reveal before allowed', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
 
@@ -489,6 +517,15 @@ describe('Avatars', function() {
       )
     })
 
+    it('reverts when commiting an already commited hash', async function() {
+      await avatarsContract.commitUsername(hash, fromUser)
+
+      await assertRevert(
+        avatarsContract.commitUsername(hash, fromUser),
+        'There is already a commit for the same hash'
+      )
+    })
+
     it('reverts when revealing an already revealed commit', async function() {
       await avatarsContract.commitUsername(hash, fromUser)
       await increaseBlocks(blocksUntilReveal)
@@ -496,7 +533,17 @@ describe('Avatars', function() {
 
       await assertRevert(
         avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'Commit was already revealed'
+        'The commit was already revealed'
+      )
+    })
+
+    it('reverts when revealing an expired commit', async function() {
+      await avatarsContract.commitUsername(hash, fromUser)
+      await increaseBlocks(blocksUntilReveal + blocksToExpire)
+
+      await assertRevert(
+        avatarsContract.revealUsername(username, metadata, salt, fromUser),
+        'The commit was expired'
       )
     })
 
@@ -538,7 +585,7 @@ describe('Avatars', function() {
           salt,
           fromAnotherUser
         ),
-        'User has not a commit to be revealed'
+        'The user has not a commit to be revealed'
       )
     })
   })
