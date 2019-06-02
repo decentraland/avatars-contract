@@ -16,7 +16,8 @@
       {
         "address": "0x9CBd5A755cd066a9b5Ff52c350cA501497F57336",
         "version": "0.1.0",
-        "implementation": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB"
+        "implementation": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB",
+        "admin": "0xefc549434a03756f6e37a43757a2927605d8839b"
       }
     ]
   },
