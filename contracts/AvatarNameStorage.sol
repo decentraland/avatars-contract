@@ -11,6 +11,7 @@ contract AvatarNameStorage {
     // Storage
     ERC20Interface public manaToken;
     uint256 public blocksUntilReveal;
+    uint256 public blocksToExpire;
     uint256 public price;
 
     struct Data {

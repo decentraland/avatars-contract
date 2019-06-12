@@ -15,15 +15,17 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     function initialize(
         ERC20Interface _mana,
         address _register,
-        uint256 _blocksUntilReveal
+        uint256 _blocksUntilReveal,
+        uint256 _blocksToExpire
     )
     public initializer
     {
         require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
-
+        require(_blocksToExpire != 0, "Blocks to expire should be greather than 0");
 
         manaToken = _mana;
         blocksUntilReveal = _blocksUntilReveal;
+        blocksToExpire = _blocksToExpire;
         price = 100000000000000000000; // 100 in wei
 
         // Allow deployer to register usernames
@@ -121,6 +123,12 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     * @param _hash - bytes32 of the commit hash
     */
     function commitUsername(bytes32 _hash) public {
+        // If the user wants to re-commit the same hash. he should wait until expires
+        require(
+            commit[msg.sender].commit != _hash ||
+            hasExpired(commit[msg.sender].blockNumber),
+            "There is already a commit for the same hash"
+        );
         commit[msg.sender].commit = _hash;
         commit[msg.sender].blockNumber = block.number;
         commit[msg.sender].revealed = false;
@@ -144,8 +152,9 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     {
         Commit storage userCommit = commit[msg.sender];
 
-        require(userCommit.commit != 0, "User has not a commit to be revealed");
-        require(userCommit.revealed == false, "Commit was already revealed");
+        require(userCommit.commit != 0, "The user has not a commit to be revealed");
+        require(userCommit.revealed == false, "The commit was already revealed");
+        require(!hasExpired(userCommit.blockNumber), "The commit was expired");
         require(
             getHash(_username, _metadata, _salt) == userCommit.commit,
             "Revealed hash does not match commit"
@@ -214,6 +223,10 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
         return usernames[_username] == address(0);
     }
 
+    function hasExpired(uint256 _blockNumber) public view returns (bool) {
+        return _blockNumber + blocksUntilReveal + blocksToExpire < block.number;
+    }
+
     /**
     * @dev Validate a username
     * @param _username - string for the username
@@ -222,7 +235,7 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
         bytes memory tempUsername = bytes(_username);
         require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
-            require(tempUsername[i] != " ", "No blanks are allowed");
+            require(tempUsername[i] > 0x1f, "Invalid Character");
         }
     }
 
