@@ -1,217 +1,28 @@
 {
   "contracts": {
     "AvatarNameRegistry": {
-      "address": "0xED869c0A7db4BA053419dA81634443a8bac10335",
-      "constructorCode": "608060405234801561001057600080fd5b50611d8f806100206000396000f3fe",
-      "bodyBytecodeHash": "79498bd59062fa5cf1b4719e5ca58fac738f54f3afbf8ec84c7b069cc863180e",
-      "localBytecodeHash": "895909a2aa4b7e673a6ad4c371934553c129060bf82d2f7dcdb2e7252a6078e7",
-      "deployedBytecodeHash": "895909a2aa4b7e673a6ad4c371934553c129060bf82d2f7dcdb2e7252a6078e7",
-      "types": {
-        "t_bool": {
-          "id": "t_bool",
-          "kind": "elementary",
-          "label": "bool"
-        },
-        "t_uint256": {
-          "id": "t_uint256",
-          "kind": "elementary",
-          "label": "uint256"
-        },
-        "t_array:50<t_uint256>": {
-          "id": "t_array:50<t_uint256>",
-          "valueType": "t_uint256",
-          "length": "50",
-          "kind": "array",
-          "label": "uint256[50]"
-        },
-        "t_address": {
-          "id": "t_address",
-          "kind": "elementary",
-          "label": "address"
-        },
-        "t_struct<AvatarNameStorage.Commit>": {
-          "id": "t_struct<AvatarNameStorage.Commit>",
-          "kind": "struct",
-          "label": "AvatarNameStorage.Commit",
-          "members": [
-            {
-              "label": "commit",
-              "astId": 530,
-              "type": "t_bytes32",
-              "src": "586:14:1"
-            },
-            {
-              "label": "blockNumber",
-              "astId": 532,
-              "type": "t_uint256",
-              "src": "610:19:1"
-            },
-            {
-              "label": "revealed",
-              "astId": 534,
-              "type": "t_bool",
-              "src": "639:13:1"
-            }
-          ]
-        },
-        "t_bytes32": {
-          "id": "t_bytes32",
-          "kind": "elementary",
-          "label": "bytes32"
-        },
-        "t_mapping<t_struct<AvatarNameStorage.Commit>>": {
-          "id": "t_mapping<t_struct<AvatarNameStorage.Commit>>",
-          "valueType": "t_struct<AvatarNameStorage.Commit>",
-          "label": "mapping(key => AvatarNameStorage.Commit)",
-          "kind": "mapping"
-        },
-        "t_mapping<t_address>": {
-          "id": "t_mapping<t_address>",
-          "valueType": "t_address",
-          "label": "mapping(key => address)",
-          "kind": "mapping"
-        },
-        "t_struct<AvatarNameStorage.Data>": {
-          "id": "t_struct<AvatarNameStorage.Data>",
-          "kind": "struct",
-          "label": "AvatarNameStorage.Data",
-          "members": [
-            {
-              "label": "username",
-              "astId": 525,
-              "type": "t_string",
-              "src": "510:15:1"
-            },
-            {
-              "label": "metadata",
-              "astId": 527,
-              "type": "t_string",
-              "src": "535:15:1"
-            }
-          ]
-        },
-        "t_string": {
-          "id": "t_string",
-          "kind": "elementary",
-          "label": "string"
-        },
-        "t_mapping<t_struct<AvatarNameStorage.Data>>": {
-          "id": "t_mapping<t_struct<AvatarNameStorage.Data>>",
-          "valueType": "t_struct<AvatarNameStorage.Data>",
-          "label": "mapping(key => AvatarNameStorage.Data)",
-          "kind": "mapping"
-        },
-        "t_mapping<t_bool>": {
-          "id": "t_mapping<t_bool>",
-          "valueType": "t_bool",
-          "label": "mapping(key => bool)",
-          "kind": "mapping"
-        }
-      },
-      "storage": [
-        {
-          "contract": "Initializable",
-          "path": "zos-lib/contracts/Initializable.sol",
-          "label": "initialized",
-          "astId": 653,
-          "type": "t_bool",
-          "src": "757:24:3"
-        },
-        {
-          "contract": "Initializable",
-          "path": "zos-lib/contracts/Initializable.sol",
-          "label": "initializing",
-          "astId": 655,
-          "type": "t_bool",
-          "src": "876:25:3"
-        },
-        {
-          "contract": "Initializable",
-          "path": "zos-lib/contracts/Initializable.sol",
-          "label": "______gap",
-          "astId": 704,
-          "type": "t_array:50<t_uint256>",
-          "src": "1891:29:3"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "manaToken",
-          "astId": 519,
-          "type": "t_address",
-          "src": "386:31:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "blocksUntilReveal",
-          "astId": 521,
-          "type": "t_uint256",
-          "src": "423:32:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "price",
-          "astId": 523,
-          "type": "t_uint256",
-          "src": "461:20:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "commit",
-          "astId": 539,
-          "type": "t_mapping<t_struct<AvatarNameStorage.Commit>>",
-          "src": "707:41:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "usernames",
-          "astId": 543,
-          "type": "t_mapping<t_address>",
-          "src": "783:37:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "user",
-          "astId": 547,
-          "type": "t_mapping<t_struct<AvatarNameStorage.Data>>",
-          "src": "853:37:1"
-        },
-        {
-          "contract": "AvatarNameStorage",
-          "path": "contracts/AvatarNameStorage.sol",
-          "label": "allowed",
-          "astId": 551,
-          "type": "t_mapping<t_bool>",
-          "src": "924:40:1"
-        }
-      ],
-      "warnings": {
-        "hasConstructor": false,
-        "hasSelfDestruct": false,
-        "hasDelegateCall": false,
-        "hasInitialValuesInDeclarations": false,
-        "uninitializedBaseContracts": []
-      }
+      "address": "0x25DCC88e449525C296831b02F6808Ed588d51990",
+      "constructorCode": "608060405234801561001057600080fd5b50611f71806100206000396000f3fe",
+      "bodyBytecodeHash": "b65ff14b7adf0dcd5612610e0459b3126541dc7c3cce2f43fd84155e80210301",
+      "localBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
+      "deployedBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
+      "types": null,
+      "storage": null
     }
   },
   "solidityLibs": {},
   "proxies": {
     "Avatars/AvatarNameRegistry": [
       {
-        "address": "0x568892F0aC1d41D468764e1E0D5501d475D93f94",
+        "address": "0xCA80041b1978Bd0a9509B6bf41FBb708a0a54874",
         "version": "0.1.0",
-        "implementation": "0xED869c0A7db4BA053419dA81634443a8bac10335"
+        "implementation": "0x25DCC88e449525C296831b02F6808Ed588d51990"
       }
     ]
   },
   "zosversion": "2.2",
   "version": "0.1.0",
   "proxyAdmin": {
-    "address": "0xFf390d2571Dc922AfAEA05df7DD8B84A7a7C6F39"
+    "address": "0x0193F32B3934E46f6bd555Ec1CBf5F16a891dF8D"
   }
 }
