@@ -11,24 +11,14 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
     * @dev Initializer of the contract
     * @param _mana - address of the mana token
     * @param _owner - address of the owner allowed to register usernames and assign the role
-    * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
-    * @param _blocksToExpire - uint256 for the blocks that should pass after reveal period to expires
-
     */
     function initialize(
         ERC20Interface _mana,
-        address _owner,
-        uint256 _blocksUntilReveal,
-        uint256 _blocksToExpire
+        address _owner
     )
     public initializer
     {
-        require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
-        require(_blocksToExpire != 0, "Blocks to expire should be greather than 0");
-
         manaToken = _mana;
-        blocksUntilReveal = _blocksUntilReveal;
-        blocksToExpire = _blocksToExpire;
         price = 100000000000000000000; // 100 in wei
 
         // Allow owner to register usernames
@@ -47,26 +37,6 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
             "The sender is not allowed to register a username"
         );
         _;
-    }
-
-    /**
-    * @dev Set commit & reveal blocks
-    * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
-    * @param _blocksToExpire - uint256 for the blocks that should pass after reveal period to expires
-    */
-    function setBlocks(uint256 _blocksUntilReveal, uint256 _blocksToExpire) external onlyOwner {
-        require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
-        require(_blocksToExpire != 0, "Blocks to expire should be greather than 0");
-
-        if ( _blocksUntilReveal != blocksUntilReveal) {
-            emit BlocksUntilRevealChanged(msg.sender, blocksUntilReveal, _blocksUntilReveal);
-            blocksUntilReveal = _blocksUntilReveal;
-        }
-
-        if (_blocksToExpire != blocksToExpire) {
-            emit BlocksToExpireChanged(msg.sender, blocksToExpire, _blocksToExpire);
-            blocksToExpire = _blocksToExpire;
-        }
     }
 
     /**
@@ -144,81 +114,6 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
     }
 
     /**
-    * @dev Commit a hash for a desire username
-    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _hash - bytes32 of the commit hash
-    */
-    function commitUsername(bytes32 _hash) public {
-        // If the user wants to re-commit the same hash. he should wait until expires
-        require(
-            commit[msg.sender].commit != _hash ||
-            hasExpired(commit[msg.sender].blockNumber),
-            "There is already a commit for the same hash"
-        );
-        commit[msg.sender].commit = _hash;
-        commit[msg.sender].blockNumber = block.number;
-        commit[msg.sender].revealed = false;
-
-        emit CommitUsername(msg.sender, _hash, block.number);
-    }
-
-    /**
-    * @dev Reveal a commit
-    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _username - string for the username
-    * @param _metadata - string for the metadata
-    * @param _salt - bytes32 for the salt
-    */
-    function revealUsername(
-        string memory _username,
-        string memory _metadata,
-        bytes32 _salt
-    )
-    public
-    {
-        Commit storage userCommit = commit[msg.sender];
-
-        require(userCommit.commit != 0, "The user has not a commit to be revealed");
-        require(userCommit.revealed == false, "The commit was already revealed");
-        require(!hasExpired(userCommit.blockNumber), "The commit was expired");
-        require(
-            getHash(_username, _metadata, _salt) == userCommit.commit,
-            "Revealed hash does not match commit"
-        );
-        require(
-            block.number > userCommit.blockNumber + blocksUntilReveal,
-            "Reveal can not be done before blocks passed"
-        );
-
-        userCommit.revealed = true;
-
-        emit RevealUsername(msg.sender, userCommit.commit, block.number);
-
-        _registerUsername(msg.sender, _username, _metadata);
-    }
-
-    /**
-    * @dev Return a bytes32 hash for the given arguments
-    * @param _username - string for the username
-    * @param _metadata - string for the metadata
-    * @param _salt - bytes32 for the salt
-    * @return bytes32 - for the hash of the given arguments
-    */
-    function getHash(
-        string memory _username,
-        string memory _metadata,
-        bytes32 _salt
-    )
-    public
-    view
-    returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(address(this), _username, _metadata, _salt)
-        );
-    }
-
-    /**
     * @dev Set metadata for an existing user
     * @param _metadata - string for the metadata
     */
@@ -247,10 +142,6 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
     */
     function isUsernameAvailable(string memory _username) public view returns (bool) {
         return usernames[_username] == address(0);
-    }
-
-    function hasExpired(uint256 _blockNumber) public view returns (bool) {
-        return _blockNumber + blocksUntilReveal + blocksToExpire < block.number;
     }
 
     /**
