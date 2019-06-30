@@ -27,10 +27,12 @@ describe('Avatars', function() {
   let deployer
   let user
   let owner
+  let hacker
   let anotherUser
   let fromOwner
   let fromUser
   let fromAnotherUser
+  let fromHacker
 
   // Contracts
   let avatarsContract
@@ -56,10 +58,12 @@ describe('Avatars', function() {
     deployer = accounts[ADDRESS_INDEXES.deployer]
     user = accounts[ADDRESS_INDEXES.user]
     anotherUser = accounts[ADDRESS_INDEXES.anotherUser]
+    hacker = accounts[ADDRESS_INDEXES.hacker]
     owner = accounts[Object.keys(ADDRESS_INDEXES).length]
     fromUser = { from: user }
     fromAnotherUser = { from: anotherUser }
     fromOwner = { from: owner }
+    fromHacker = { from: hacker }
 
     const fromDeployer = { from: deployer }
     creationParams = {
@@ -227,14 +231,17 @@ describe('Avatars', function() {
       expect(data.metadata).to.be.equal(newMetadata)
     })
 
-    it('accepts blanks', async function() {
-      const usernameWithBlanks = 'this username has blanks'
+    it('reverts when the name has blanks', async function() {
+      const usernameWithBlanks = 'the username'
 
-      await avatarsContract.registerUsername(
-        user,
-        usernameWithBlanks,
-        metadata,
-        fromOwner
+      await assertRevert(
+        avatarsContract.registerUsername(
+          user,
+          usernameWithBlanks,
+          metadata,
+          fromOwner
+        ),
+        'Invalid Character'
       )
     })
 
@@ -271,8 +278,8 @@ describe('Avatars', function() {
       )
     })
 
-    it('reverts when username is greather than 32 bytes', async function() {
-      const validUsername = 'this_username_is_very_very_tight'
+    it('reverts when username is greather than 15 bytes', async function() {
+      const validUsername = 'the_username_is'
       await avatarsContract.registerUsername(
         user,
         validUsername,
@@ -280,7 +287,7 @@ describe('Avatars', function() {
         fromOwner
       )
 
-      const bigUsername = 'username_given_is_very_very_large'
+      const bigUsername = 'this_username_is'
       await assertRevert(
         avatarsContract.registerUsername(
           user,
@@ -288,7 +295,7 @@ describe('Avatars', function() {
           metadata,
           fromOwner
         ),
-        'Username should be less than or equal 32 characters'
+        'Username should be less than or equal 15 characters'
       )
     })
 
@@ -675,6 +682,7 @@ describe('Avatars', function() {
       let allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
 
+      // Set allowance to user
       const { logs } = await avatarsContract.setAllowed(user, true, fromOwner)
 
       expect(logs.length).to.be.equal(1)
@@ -689,20 +697,14 @@ describe('Avatars', function() {
       allowed = await avatarsContract.allowed(anotherUser)
       expect(allowed).to.be.equal(false)
 
-      // Set allowance to user
-      await avatarsContract.setAllowed(user, true, fromOwner)
-
-      allowed = await avatarsContract.allowed(user)
-      expect(allowed).to.be.equal(true)
-
       // Set allowance to another user
-      await avatarsContract.setAllowed(anotherUser, true, fromUser)
+      await avatarsContract.setAllowed(anotherUser, true, fromOwner)
 
       allowed = await avatarsContract.allowed(anotherUser)
       expect(allowed).to.be.equal(true)
 
       // Remove allowance to user
-      await avatarsContract.setAllowed(user, false, fromAnotherUser)
+      await avatarsContract.setAllowed(user, false, fromOwner)
 
       allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
@@ -735,9 +737,10 @@ describe('Avatars', function() {
 
     it('reverts when trying to allow an account by not an allowed account', async function() {
       await assertRevert(
-        avatarsContract.setAllowed(anotherUser, true, fromUser),
-        'The sender is not allowed to register a username'
+        avatarsContract.setAllowed(anotherUser, true, fromUser)
       )
+
+      await assertRevert(avatarsContract.setAllowed(user, true, fromHacker))
     })
   })
 

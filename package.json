@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "truffle-hdwallet-provider": "^1.0.10",
-    "zos": "^2.2.3",
-    "zos-lib": "^2.2.3"
+    "zos": "^2.4.0",
+    "zos-lib": "^2.4.0"
   }
 }

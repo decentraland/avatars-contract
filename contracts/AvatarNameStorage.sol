@@ -44,4 +44,6 @@ contract AvatarNameStorage {
     event Allow(address indexed _caller, address indexed _account, bool _allowed);
     event CommitUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
     event RevealUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
+    event BlocksUntilRevealChanged(address indexed _caller, uint256 _oldValue, uint256 _newValue);
+    event BlocksToExpireChanged(address indexed _caller, uint256 _oldValue, uint256 _newValue);
 }

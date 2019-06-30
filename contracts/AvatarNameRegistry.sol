@@ -1,20 +1,23 @@
 pragma solidity ^0.5.0;
 
 import "zos-lib/contracts/Initializable.sol";
+import "zos-lib/contracts/ownership/Ownable.sol";
 import "./AvatarNameStorage.sol";
 
 
-contract AvatarNameRegistry is Initializable, AvatarNameStorage {
+contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
     * @param _mana - address of the mana token
-    * @param _register - address of the user allowed to register usernames and assign the role
+    * @param _owner - address of the owner allowed to register usernames and assign the role
     * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
+    * @param _blocksToExpire - uint256 for the blocks that should pass after reveal period to expires
+
     */
     function initialize(
         ERC20Interface _mana,
-        address _register,
+        address _owner,
         uint256 _blocksUntilReveal,
         uint256 _blocksToExpire
     )
@@ -28,8 +31,11 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
         blocksToExpire = _blocksToExpire;
         price = 100000000000000000000; // 100 in wei
 
-        // Allow deployer to register usernames
-        allowed[_register] = true;
+        // Allow owner to register usernames
+        allowed[_owner] = true;
+
+        // Owner
+        transferOwnership(_owner);
     }
 
     /**
@@ -44,11 +50,31 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     }
 
     /**
+    * @dev Set commit & reveal blocks
+    * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
+    * @param _blocksToExpire - uint256 for the blocks that should pass after reveal period to expires
+    */
+    function setBlocks(uint256 _blocksUntilReveal, uint256 _blocksToExpire) external onlyOwner {
+        require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
+        require(_blocksToExpire != 0, "Blocks to expire should be greather than 0");
+
+        if ( _blocksUntilReveal != blocksUntilReveal) {
+            emit BlocksUntilRevealChanged(msg.sender, blocksUntilReveal, _blocksUntilReveal);
+            blocksUntilReveal = _blocksUntilReveal;
+        }
+
+        if (_blocksToExpire != blocksToExpire) {
+            emit BlocksToExpireChanged(msg.sender, blocksToExpire, _blocksToExpire);
+            blocksToExpire = _blocksToExpire;
+        }
+    }
+
+    /**
     * @dev Manage role for an account
     * @param _account - address of the account to be managed
     * @param _allowed - bool whether the account should be allowed or not
     */
-    function setAllowed(address _account, bool _allowed) external onlyAllowed {
+    function setAllowed(address _account, bool _allowed) external onlyOwner {
         require(_account != msg.sender, "You can not manage your role");
         allowed[_account] = _allowed;
         emit Allow(msg.sender, _account, _allowed);
@@ -233,9 +259,9 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     */
     function _requireUsernameValid(string memory _username) internal pure {
         bytes memory tempUsername = bytes(_username);
-        require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
+        require(tempUsername.length <= 15, "Username should be less than or equal 15 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
-            require(tempUsername[i] > 0x1f, "Invalid Character");
+            require(tempUsername[i] > 0x20, "Invalid Character");
         }
     }
 
