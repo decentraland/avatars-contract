@@ -1,7 +1,6 @@
 import { Mana, ADDRESS_INDEXES } from 'decentraland-contract-plugins'
 
 import assertRevert from './helpers/assertRevert'
-import { increaseBlocks } from './helpers/increase'
 
 const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
@@ -12,14 +11,9 @@ describe('Avatars', function() {
   this.timeout(100000)
 
   // globals
-  const EMPTY_32_BYTES =
-    '0x0000000000000000000000000000000000000000000000000000000000000000'
   const username = 'ignacio'
   const metadata = 'the metadata'
-  const salt = web3.utils.randomHex(32) // Random 32-bytes hexa
 
-  const blocksUntilReveal = 10
-  const blocksToExpire = 10
   let creationParams
 
   // Accounts
@@ -27,10 +21,11 @@ describe('Avatars', function() {
   let deployer
   let user
   let owner
+  let hacker
   let anotherUser
   let fromOwner
   let fromUser
-  let fromAnotherUser
+  let fromHacker
 
   // Contracts
   let avatarsContract
@@ -56,10 +51,11 @@ describe('Avatars', function() {
     deployer = accounts[ADDRESS_INDEXES.deployer]
     user = accounts[ADDRESS_INDEXES.user]
     anotherUser = accounts[ADDRESS_INDEXES.anotherUser]
+    hacker = accounts[ADDRESS_INDEXES.hacker]
     owner = accounts[Object.keys(ADDRESS_INDEXES).length]
     fromUser = { from: user }
-    fromAnotherUser = { from: anotherUser }
     fromOwner = { from: owner }
+    fromHacker = { from: hacker }
 
     const fromDeployer = { from: deployer }
     creationParams = {
@@ -74,12 +70,7 @@ describe('Avatars', function() {
 
     avatarsContract = await Avatars.new(creationParams)
 
-    avatarsContract.initialize(
-      manaContract.address,
-      owner,
-      blocksUntilReveal,
-      blocksToExpire
-    )
+    avatarsContract.initialize(manaContract.address, owner)
 
     await mana.authorize(avatarsContract.address)
   })
@@ -87,38 +78,13 @@ describe('Avatars', function() {
   describe('Constructor', function() {
     it('should be depoyed with valid arguments', async function() {
       const contract = await Avatars.new(creationParams)
-      await contract.initialize(
-        manaContract.address,
-        owner,
-        blocksUntilReveal,
-        blocksToExpire
-      )
+      await contract.initialize(manaContract.address, owner)
 
       const mana = await contract.manaToken()
       const canRegister = await contract.allowed(owner)
-      const blocks = await contract.blocksUntilReveal()
 
       expect(mana).to.be.equal(manaContract.address)
       expect(canRegister).to.be.equal(true)
-      expect(blocks).to.be.eq.BN(blocksUntilReveal)
-    })
-
-    it('reverts when trying to deploy with blocksUntilReveal = 0', async function() {
-      const contract = await Avatars.new(creationParams)
-
-      await assertRevert(
-        contract.initialize(manaContract.address, owner, 0, blocksToExpire),
-        'Blocks until reveal should be greather than 0'
-      )
-    })
-
-    it('reverts when trying to deploy with blocksToExpire = 0', async function() {
-      const contract = await Avatars.new(creationParams)
-
-      await assertRevert(
-        contract.initialize(manaContract.address, owner, blocksUntilReveal, 0),
-        'Blocks to expire should be greather than 0'
-      )
     })
   })
 
@@ -227,14 +193,17 @@ describe('Avatars', function() {
       expect(data.metadata).to.be.equal(newMetadata)
     })
 
-    it('accepts blanks', async function() {
-      const usernameWithBlanks = 'this username has blanks'
+    it('reverts when the name has blanks', async function() {
+      const usernameWithBlanks = 'the username'
 
-      await avatarsContract.registerUsername(
-        user,
-        usernameWithBlanks,
-        metadata,
-        fromOwner
+      await assertRevert(
+        avatarsContract.registerUsername(
+          user,
+          usernameWithBlanks,
+          metadata,
+          fromOwner
+        ),
+        'Invalid Character'
       )
     })
 
@@ -271,8 +240,8 @@ describe('Avatars', function() {
       )
     })
 
-    it('reverts when username is greather than 32 bytes', async function() {
-      const validUsername = 'this_username_is_very_very_tight'
+    it('reverts when username is greather than 15 bytes', async function() {
+      const validUsername = 'the_username_is'
       await avatarsContract.registerUsername(
         user,
         validUsername,
@@ -280,7 +249,7 @@ describe('Avatars', function() {
         fromOwner
       )
 
-      const bigUsername = 'username_given_is_very_very_large'
+      const bigUsername = 'this_username_is'
       await assertRevert(
         avatarsContract.registerUsername(
           user,
@@ -288,7 +257,7 @@ describe('Avatars', function() {
           metadata,
           fromOwner
         ),
-        'Username should be less than or equal 32 characters'
+        'Username should be less than or equal 15 characters'
       )
     })
 
@@ -328,300 +297,6 @@ describe('Avatars', function() {
       }
 
       await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
-    })
-  })
-
-  describe('Commit & Reveal', function() {
-    let hash
-
-    beforeEach(async function() {
-      hash = await avatarsContract.getHash(username, metadata, salt, fromUser)
-    })
-
-    it('should match solidity hash with web3 hash', async function() {
-      // Remove 0x
-      const contractAddress = avatarsContract.address.toLowerCase().slice(2)
-      const hexUsername = web3.utils.toHex(username).slice(2)
-      const hexMetadata = web3.utils.toHex(metadata).slice(2)
-      const userSalt = salt.slice(2)
-
-      const web3Hash = web3.utils.keccak256(
-        '0x' + contractAddress + hexUsername + hexMetadata + userSalt
-      )
-
-      expect(web3Hash).to.be.equal(hash)
-    })
-
-    it('should commit', async function() {
-      // Check user commit
-      let userCommit = await avatarsContract.commit(user)
-
-      expect(userCommit.commit).to.be.equal(EMPTY_32_BYTES)
-      expect(userCommit.blockNumber).to.eq.BN(0)
-      expect(userCommit.revealed).to.eq.BN(false)
-
-      const hash = await avatarsContract.getHash(
-        username,
-        metadata,
-        salt,
-        fromUser
-      )
-
-      const { logs } = await avatarsContract.commitUsername(hash, fromUser)
-      const blockNumber = (await web3.eth.getBlock('latest')).number
-
-      // Check logs
-      expect(logs.length).to.be.equal(1)
-
-      const log = logs[0]
-      expect(log.event).to.be.equal('CommitUsername')
-      expect(log.args._owner).to.be.equal(user)
-      expect(log.args._hash).to.be.equal(hash)
-      expect(log.args._blockNumber).to.eq.BN(blockNumber)
-
-      // Check user commit
-      userCommit = await avatarsContract.commit(user)
-
-      expect(userCommit.commit).to.be.equal(hash)
-      expect(userCommit.blockNumber).to.eq.BN(blockNumber)
-      expect(userCommit.revealed).to.eq.BN(false)
-    })
-
-    it('should commit & reveal', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      // Check user commit
-      let userCommit = await avatarsContract.commit(user)
-      const commitBlockNumber = (await web3.eth.getBlock('latest')).number
-
-      expect(userCommit.commit).to.be.equal(hash)
-      expect(userCommit.blockNumber).to.eq.BN(commitBlockNumber)
-      expect(userCommit.revealed).to.eq.BN(false)
-
-      await increaseBlocks(blocksUntilReveal)
-
-      const { logs } = await avatarsContract.revealUsername(
-        username,
-        metadata,
-        salt,
-        fromUser
-      )
-      const revealBlockNumber = (await web3.eth.getBlock('latest')).number
-
-      // Check logs
-      expect(logs.length).to.be.equal(2)
-
-      const log = logs[0]
-      expect(log.event).to.be.equal('RevealUsername')
-      expect(log.args._owner).to.be.equal(user)
-      expect(log.args._hash).to.be.equal(hash)
-      expect(log.args._blockNumber).to.eq.BN(revealBlockNumber)
-
-      checkRegisterEvent(logs[1], user, user)
-
-      // Check user data
-      const data = await avatarsContract.user(user)
-      expect(data.username).to.be.equal(username)
-      expect(data.metadata).to.be.equal(metadata)
-
-      // Check user commit
-      userCommit = await avatarsContract.commit(user)
-      expect(userCommit.commit).to.be.equal(hash)
-      expect(userCommit.blockNumber).to.eq.BN(commitBlockNumber)
-      expect(userCommit.revealed).to.eq.BN(true)
-    })
-
-    it('should override previous commit', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal - 1)
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'Reveal can not be done before blocks passed'
-      )
-
-      const newUsername = username + 'v2'
-      const newHash = await avatarsContract.getHash(
-        newUsername,
-        metadata,
-        salt,
-        fromUser
-      )
-      await avatarsContract.commitUsername(newHash, fromUser)
-
-      await increaseBlocks(1)
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'Revealed hash does not match commit'
-      )
-      await assertRevert(
-        avatarsContract.revealUsername(newUsername, metadata, salt, fromUser),
-        'Reveal can not be done before blocks passed'
-      )
-
-      await increaseBlocks(blocksUntilReveal)
-
-      await avatarsContract.revealUsername(
-        newUsername,
-        metadata,
-        salt,
-        fromUser
-      )
-    })
-
-    it('should update username', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-      await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
-
-      // Check user data
-      let data = await avatarsContract.user(user)
-      expect(data.username).to.be.equal(username)
-      expect(data.metadata).to.be.equal(metadata)
-
-      const newUsername = username + 'v2'
-      const newHash = await avatarsContract.getHash(
-        newUsername,
-        '',
-        salt,
-        fromUser
-      )
-      await avatarsContract.commitUsername(newHash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(newUsername, '', salt, fromUser)
-
-      data = await avatarsContract.user(user)
-      expect(data.username).to.be.equal(newUsername)
-      expect(data.metadata).to.be.equal(metadata)
-    })
-
-    it('should commit an already commited hash after expired', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal + blocksToExpire)
-
-      await avatarsContract.commitUsername(hash, fromUser)
-    })
-
-    it('reverts when commit & reveal before allowed', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal - 1)
-
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'Reveal can not be done before blocks passed'
-      )
-    })
-
-    it('reverts when revealing with different data', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      const alteredUsername = `${username} `
-      await assertRevert(
-        avatarsContract.revealUsername(
-          alteredUsername,
-          metadata,
-          salt,
-          fromUser
-        ),
-        'Revealed hash does not match commit'
-      )
-
-      const alteredMetadata = `${metadata} `
-      await assertRevert(
-        avatarsContract.revealUsername(
-          username,
-          alteredMetadata,
-          salt,
-          fromUser
-        ),
-        'Revealed hash does not match commit'
-      )
-
-      const alteredSalt = web3.utils.randomHex(32)
-      await assertRevert(
-        avatarsContract.revealUsername(
-          username,
-          metadata,
-          alteredSalt,
-          fromUser
-        ),
-        'Revealed hash does not match commit'
-      )
-    })
-
-    it('reverts when commiting an already commited hash', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await assertRevert(
-        avatarsContract.commitUsername(hash, fromUser),
-        'There is already a commit for the same hash'
-      )
-    })
-
-    it('reverts when revealing an already revealed commit', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-      await increaseBlocks(blocksUntilReveal)
-      await avatarsContract.revealUsername(username, metadata, salt, fromUser)
-
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'The commit was already revealed'
-      )
-    })
-
-    it('reverts when revealing an expired commit', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-      await increaseBlocks(blocksUntilReveal + blocksToExpire)
-
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'The commit was expired'
-      )
-    })
-
-    it('reverts when username was already taken', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal)
-
-      await avatarsContract.registerUsername(
-        anotherUser,
-        username,
-        metadata,
-        fromOwner
-      )
-
-      await assertRevert(
-        avatarsContract.revealUsername(username, metadata, salt, fromUser),
-        'The username was already taken'
-      )
-
-      let data = await avatarsContract.user(anotherUser)
-      expect(data.username).to.be.equal(username)
-      expect(data.metadata).to.be.equal(metadata)
-
-      data = await avatarsContract.user(user)
-      expect(data.username).to.be.equal('')
-      expect(data.metadata).to.be.equal('')
-    })
-
-    it('reverts when a user try to reveal someone else commit', async function() {
-      await avatarsContract.commitUsername(hash, fromUser)
-
-      await increaseBlocks(blocksUntilReveal)
-
-      await assertRevert(
-        avatarsContract.revealUsername(
-          username,
-          metadata,
-          salt,
-          fromAnotherUser
-        ),
-        'The user has not a commit to be revealed'
-      )
     })
   })
 
@@ -675,6 +350,7 @@ describe('Avatars', function() {
       let allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
 
+      // Set allowance to user
       const { logs } = await avatarsContract.setAllowed(user, true, fromOwner)
 
       expect(logs.length).to.be.equal(1)
@@ -689,20 +365,14 @@ describe('Avatars', function() {
       allowed = await avatarsContract.allowed(anotherUser)
       expect(allowed).to.be.equal(false)
 
-      // Set allowance to user
-      await avatarsContract.setAllowed(user, true, fromOwner)
-
-      allowed = await avatarsContract.allowed(user)
-      expect(allowed).to.be.equal(true)
-
       // Set allowance to another user
-      await avatarsContract.setAllowed(anotherUser, true, fromUser)
+      await avatarsContract.setAllowed(anotherUser, true, fromOwner)
 
       allowed = await avatarsContract.allowed(anotherUser)
       expect(allowed).to.be.equal(true)
 
       // Remove allowance to user
-      await avatarsContract.setAllowed(user, false, fromAnotherUser)
+      await avatarsContract.setAllowed(user, false, fromOwner)
 
       allowed = await avatarsContract.allowed(user)
       expect(allowed).to.be.equal(false)
@@ -735,23 +405,10 @@ describe('Avatars', function() {
 
     it('reverts when trying to allow an account by not an allowed account', async function() {
       await assertRevert(
-        avatarsContract.setAllowed(anotherUser, true, fromUser),
-        'The sender is not allowed to register a username'
+        avatarsContract.setAllowed(anotherUser, true, fromUser)
       )
-    })
-  })
 
-  describe('hasExpired', function() {
-    it('should check if it is expired', async function() {
-      const blockNumber = (await web3.eth.getBlock('latest')).number
-      let hasExpired = await avatarsContract.hasExpired(blockNumber)
-
-      expect(hasExpired).to.be.equal(false)
-
-      await increaseBlocks(blocksUntilReveal + blocksToExpire)
-      hasExpired = await avatarsContract.hasExpired(blockNumber)
-
-      expect(hasExpired).to.be.equal(true)
+      await assertRevert(avatarsContract.setAllowed(user, true, fromHacker))
     })
   })
 })

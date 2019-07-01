@@ -34,13 +34,17 @@ contract Initializable {
   modifier initializer() {
     require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
 
-    bool wasInitializing = initializing;
-    initializing = true;
-    initialized = true;
+    bool isTopLevelCall = !initializing;
+    if (isTopLevelCall) {
+      initializing = true;
+      initialized = true;
+    }
 
     _;
 
-    initializing = wasInitializing;
+    if (isTopLevelCall) {
+      initializing = false;
+    }
   }
 
   /// @dev Returns true if and only if the function is running in the constructor
@@ -59,6 +63,86 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
+// File: zos-lib/contracts/ownership/Ownable.sol
+
+pragma solidity ^0.5.0;
+
+/**
+ * @title Ownable
+ * @dev The Ownable contract has an owner address, and provides basic authorization control
+ * functions, this simplifies the implementation of "user permissions".
+ *
+ * Source https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-solidity/v2.1.3/contracts/ownership/Ownable.sol
+ * This contract is copied here and renamed from the original to avoid clashes in the compiled artifacts
+ * when the user imports a zos-lib contract (that transitively causes this contract to be compiled and added to the
+ * build/artifacts folder) as well as the vanilla Ownable implementation from an openzeppelin version.
+ */
+contract ZOSLibOwnable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
+
+    /**
+     * @return the address of the owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner());
+        _;
+    }
+
+    /**
+     * @return true if `msg.sender` is the owner of the contract.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+
+    /**
+     * @dev Allows the current owner to relinquish control of the contract.
+     * @notice Renouncing to ownership will leave the contract without an owner.
+     * It will not be possible to call the functions with the `onlyOwner`
+     * modifier anymore.
+     */
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0));
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
 // File: contracts/AvatarNameStorage.sol
 
 pragma solidity ^0.5.0;
@@ -73,22 +157,13 @@ contract ERC20Interface {
 contract AvatarNameStorage {
     // Storage
     ERC20Interface public manaToken;
-    uint256 public blocksUntilReveal;
-    uint256 public blocksToExpire;
     uint256 public price;
 
     struct Data {
         string username;
         string metadata;
     }
-    struct Commit {
-        bytes32 commit;
-        uint256 blockNumber;
-        bool revealed;
-    }
 
-    // Stores commit messages by accounts
-    mapping (address => Commit) public commit;
     // Stores usernames used
     mapping (string => address) usernames;
     // Stores account data
@@ -105,8 +180,6 @@ contract AvatarNameStorage {
     );
     event MetadataChanged(address indexed _owner, string _metadata);
     event Allow(address indexed _caller, address indexed _account, bool _allowed);
-    event CommitUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
-    event RevealUsername(address indexed _owner, bytes32 indexed _hash, uint256 _blockNumber);
 }
 
 // File: contracts/AvatarNameRegistry.sol
@@ -116,32 +189,28 @@ pragma solidity ^0.5.0;
 
 
 
-contract AvatarNameRegistry is Initializable, AvatarNameStorage {
+
+contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
     * @param _mana - address of the mana token
-    * @param _register - address of the user allowed to register usernames and assign the role
-    * @param _blocksUntilReveal - uint256 for the blocks that should pass before reveal a commit
+    * @param _owner - address of the owner allowed to register usernames and assign the role
     */
     function initialize(
         ERC20Interface _mana,
-        address _register,
-        uint256 _blocksUntilReveal,
-        uint256 _blocksToExpire
+        address _owner
     )
     public initializer
     {
-        require(_blocksUntilReveal != 0, "Blocks until reveal should be greather than 0");
-        require(_blocksToExpire != 0, "Blocks to expire should be greather than 0");
-
         manaToken = _mana;
-        blocksUntilReveal = _blocksUntilReveal;
-        blocksToExpire = _blocksToExpire;
         price = 100000000000000000000; // 100 in wei
 
-        // Allow deployer to register usernames
-        allowed[_register] = true;
+        // Allow owner to register usernames
+        allowed[_owner] = true;
+
+        // Owner
+        transferOwnership(_owner);
     }
 
     /**
@@ -160,7 +229,7 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     * @param _account - address of the account to be managed
     * @param _allowed - bool whether the account should be allowed or not
     */
-    function setAllowed(address _account, bool _allowed) external onlyAllowed {
+    function setAllowed(address _account, bool _allowed) external onlyOwner {
         require(_account != msg.sender, "You can not manage your role");
         allowed[_account] = _allowed;
         emit Allow(msg.sender, _account, _allowed);
@@ -230,81 +299,6 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
     }
 
     /**
-    * @dev Commit a hash for a desire username
-    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _hash - bytes32 of the commit hash
-    */
-    function commitUsername(bytes32 _hash) public {
-        // If the user wants to re-commit the same hash. he should wait until expires
-        require(
-            commit[msg.sender].commit != _hash ||
-            hasExpired(commit[msg.sender].blockNumber),
-            "There is already a commit for the same hash"
-        );
-        commit[msg.sender].commit = _hash;
-        commit[msg.sender].blockNumber = block.number;
-        commit[msg.sender].revealed = false;
-
-        emit CommitUsername(msg.sender, _hash, block.number);
-    }
-
-    /**
-    * @dev Reveal a commit
-    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
-    * @param _username - string for the username
-    * @param _metadata - string for the metadata
-    * @param _salt - bytes32 for the salt
-    */
-    function revealUsername(
-        string memory _username,
-        string memory _metadata,
-        bytes32 _salt
-    )
-    public
-    {
-        Commit storage userCommit = commit[msg.sender];
-
-        require(userCommit.commit != 0, "The user has not a commit to be revealed");
-        require(userCommit.revealed == false, "The commit was already revealed");
-        require(!hasExpired(userCommit.blockNumber), "The commit was expired");
-        require(
-            getHash(_username, _metadata, _salt) == userCommit.commit,
-            "Revealed hash does not match commit"
-        );
-        require(
-            block.number > userCommit.blockNumber + blocksUntilReveal,
-            "Reveal can not be done before blocks passed"
-        );
-
-        userCommit.revealed = true;
-
-        emit RevealUsername(msg.sender, userCommit.commit, block.number);
-
-        _registerUsername(msg.sender, _username, _metadata);
-    }
-
-    /**
-    * @dev Return a bytes32 hash for the given arguments
-    * @param _username - string for the username
-    * @param _metadata - string for the metadata
-    * @param _salt - bytes32 for the salt
-    * @return bytes32 - for the hash of the given arguments
-    */
-    function getHash(
-        string memory _username,
-        string memory _metadata,
-        bytes32 _salt
-    )
-    public
-    view
-    returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(address(this), _username, _metadata, _salt)
-        );
-    }
-
-    /**
     * @dev Set metadata for an existing user
     * @param _metadata - string for the metadata
     */
@@ -335,19 +329,15 @@ contract AvatarNameRegistry is Initializable, AvatarNameStorage {
         return usernames[_username] == address(0);
     }
 
-    function hasExpired(uint256 _blockNumber) public view returns (bool) {
-        return _blockNumber + blocksUntilReveal + blocksToExpire < block.number;
-    }
-
     /**
     * @dev Validate a username
     * @param _username - string for the username
     */
     function _requireUsernameValid(string memory _username) internal pure {
         bytes memory tempUsername = bytes(_username);
-        require(tempUsername.length <= 32, "Username should be less than or equal 32 characters");
+        require(tempUsername.length <= 15, "Username should be less than or equal 15 characters");
         for(uint256 i = 0; i < tempUsername.length; i++) {
-            require(tempUsername[i] > 0x1f, "Invalid Character");
+            require(tempUsername[i] > 0x20, "Invalid Character");
         }
     }
 
