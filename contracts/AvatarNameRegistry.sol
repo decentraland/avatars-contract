@@ -67,6 +67,7 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
         _requireBalance(_beneficiary);
         _requireUsernameValid(_username);
         require(isUsernameAvailable(_username), "The username was already taken");
+        require(!userExists(_beneficiary));
 
         manaToken.transferFrom(_beneficiary, address(this), price);
         manaToken.burn(price);
