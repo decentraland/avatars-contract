@@ -1,7 +1,7 @@
 {
-  "name": "decentraland-burner",
+  "name": "avatars-contract",
   "version": "1.0.0",
-  "description": "Decentraland burner contract",
+  "description": "Decentraland avatar contract",
   "main": "index.js",
   "scripts": {
     "test": "scripts/test.sh",

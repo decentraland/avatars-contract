@@ -1,8 +1,15 @@
 {
   "zosversion": "2.2",
-  "name": "Avatars",
-  "version": "0.1.0",
   "contracts": {
     "AvatarNameRegistry": "AvatarNameRegistry"
+  },
+  "dependencies": {},
+  "name": "avatars-contract",
+  "version": "1.0.0",
+  "compiler": {
+    "manager": "truffle",
+    "compilerSettings": {
+      "optimizer": {}
+    }
   }
 }

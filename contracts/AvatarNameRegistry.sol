@@ -25,7 +25,7 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
         allowed[_owner] = true;
 
         // Owner
-        transferOwnership(_owner);
+        _transferOwnership(_owner);
     }
 
     /**
