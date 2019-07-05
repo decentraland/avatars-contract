@@ -1,17 +1,12 @@
 {
   "contracts": {
     "AvatarNameRegistry": {
-      "address": "0xE22AC5Ee977F9054843d75503789D3098a46e9C0",
-      "constructorCode": "6080604081905260008054600160a060020a0319163317808255600160a060020a0316917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a36117d7806100576000396000f3fe",
-      "bodyBytecodeHash": "65b361ee20f48b29e532750015218e0407f2aea3c5151eea646ee0a45950248b",
-      "localBytecodeHash": "435c928440554db0b5bada01fc0cbc22b2be0d60c49c056168d791ba5fac2f5d",
-      "deployedBytecodeHash": "435c928440554db0b5bada01fc0cbc22b2be0d60c49c056168d791ba5fac2f5d",
+      "address": "0x894b883905bfEe2CC448880F1b59f4A762E67566",
+      "constructorCode": "608060405234801561001057600080fd5b506116a0806100206000396000f3fe",
+      "bodyBytecodeHash": "44997914042cec11269c32c616f523d0c91712eb4c61ef87cd5d9b87dc81ca01",
+      "localBytecodeHash": "36b70cc4bb9a77f2c72d4afe57d3515c0125d5e649acac579776cea5fb8c7649",
+      "deployedBytecodeHash": "36b70cc4bb9a77f2c72d4afe57d3515c0125d5e649acac579776cea5fb8c7649",
       "types": {
-        "t_address": {
-          "id": "t_address",
-          "kind": "elementary",
-          "label": "address"
-        },
         "t_bool": {
           "id": "t_bool",
           "kind": "elementary",
@@ -29,6 +24,11 @@
           "kind": "array",
           "label": "uint256[50]"
         },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
         "t_mapping<t_address>": {
           "id": "t_mapping<t_address>",
           "valueType": "t_address",
@@ -42,13 +42,13 @@
           "members": [
             {
               "label": "username",
-              "astId": 376,
+              "astId": 375,
               "type": "t_string",
               "src": "472:15:1"
             },
             {
               "label": "metadata",
-              "astId": 378,
+              "astId": 377,
               "type": "t_string",
               "src": "497:15:1"
             }
@@ -74,42 +74,50 @@
       },
       "storage": [
         {
-          "contract": "ZOSLibOwnable",
-          "path": "zos-lib/contracts/ownership/Ownable.sol",
-          "label": "_owner",
-          "astId": 540,
-          "type": "t_address",
-          "src": "689:22:4"
-        },
-        {
           "contract": "Initializable",
           "path": "zos-lib/contracts/Initializable.sol",
           "label": "initialized",
-          "astId": 477,
+          "astId": 595,
           "type": "t_bool",
-          "src": "757:24:3"
+          "src": "757:24:4"
         },
         {
           "contract": "Initializable",
           "path": "zos-lib/contracts/Initializable.sol",
           "label": "initializing",
-          "astId": 479,
+          "astId": 597,
           "type": "t_bool",
-          "src": "876:25:3"
+          "src": "876:25:4"
         },
         {
           "contract": "Initializable",
           "path": "zos-lib/contracts/Initializable.sol",
           "label": "______gap",
-          "astId": 535,
+          "astId": 653,
           "type": "t_array:50<t_uint256>",
-          "src": "1951:29:3"
+          "src": "1951:29:4"
+        },
+        {
+          "contract": "Ownable",
+          "path": "openzeppelin-eth/contracts/ownership/Ownable.sol",
+          "label": "_owner",
+          "astId": 479,
+          "type": "t_address",
+          "src": "302:22:3"
+        },
+        {
+          "contract": "Ownable",
+          "path": "openzeppelin-eth/contracts/ownership/Ownable.sol",
+          "label": "______gap",
+          "astId": 590,
+          "type": "t_array:50<t_uint256>",
+          "src": "2262:29:3"
         },
         {
           "contract": "AvatarNameStorage",
           "path": "contracts/AvatarNameStorage.sol",
           "label": "manaToken",
-          "astId": 372,
+          "astId": 371,
           "type": "t_address",
           "src": "386:31:1"
         },
@@ -117,7 +125,7 @@
           "contract": "AvatarNameStorage",
           "path": "contracts/AvatarNameStorage.sol",
           "label": "price",
-          "astId": 374,
+          "astId": 373,
           "type": "t_uint256",
           "src": "423:20:1"
         },
@@ -125,7 +133,7 @@
           "contract": "AvatarNameStorage",
           "path": "contracts/AvatarNameStorage.sol",
           "label": "usernames",
-          "astId": 383,
+          "astId": 382,
           "type": "t_mapping<t_address>",
           "src": "554:37:1"
         },
@@ -133,7 +141,7 @@
           "contract": "AvatarNameStorage",
           "path": "contracts/AvatarNameStorage.sol",
           "label": "user",
-          "astId": 387,
+          "astId": 386,
           "type": "t_mapping<t_struct<AvatarNameStorage.Data>>",
           "src": "624:37:1"
         },
@@ -141,7 +149,7 @@
           "contract": "AvatarNameStorage",
           "path": "contracts/AvatarNameStorage.sol",
           "label": "allowed",
-          "astId": 391,
+          "astId": 390,
           "type": "t_mapping<t_bool>",
           "src": "695:40:1"
         }
@@ -159,9 +167,9 @@
   "proxies": {
     "avatars-contract/AvatarNameRegistry": [
       {
-        "address": "0xF3eedb4fD8edB71c4d27B1e96a5ED7203466cEF1",
+        "address": "0xcd816354450015A5644857FEd507afEeaE7263af",
         "version": "1.0.0",
-        "implementation": "0xE22AC5Ee977F9054843d75503789D3098a46e9C0",
+        "implementation": "0x894b883905bfEe2CC448880F1b59f4A762E67566",
         "kind": "Upgradeable",
         "admin": "0xBCAc4dafB7e215f2F6cb3312aF6D5e4F9d9E7eDA"
       }
@@ -170,6 +178,6 @@
   "zosversion": "2.2",
   "version": "1.0.0",
   "proxyAdmin": {
-    "address": "0x94f836BCe30DA56021C248eCEbDAd22C46C2b2AE"
+    "address": "0xcABF631Ce619FD0e46194EFA335e04940ec20910"
   }
 }
