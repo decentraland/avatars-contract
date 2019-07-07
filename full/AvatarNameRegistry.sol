@@ -63,21 +63,17 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: zos-lib/contracts/ownership/Ownable.sol
+// File: openzeppelin-eth/contracts/ownership/Ownable.sol
 
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.2;
+
 
 /**
  * @title Ownable
  * @dev The Ownable contract has an owner address, and provides basic authorization control
  * functions, this simplifies the implementation of "user permissions".
- *
- * Source https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-solidity/v2.1.3/contracts/ownership/Ownable.sol
- * This contract is copied here and renamed from the original to avoid clashes in the compiled artifacts
- * when the user imports a zos-lib contract (that transitively causes this contract to be compiled and added to the
- * build/artifacts folder) as well as the vanilla Ownable implementation from an openzeppelin version.
  */
-contract ZOSLibOwnable {
+contract Ownable is Initializable {
     address private _owner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -86,8 +82,8 @@ contract ZOSLibOwnable {
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
-    constructor () internal {
-        _owner = msg.sender;
+    function initialize(address sender) public initializer {
+        _owner = sender;
         emit OwnershipTransferred(address(0), _owner);
     }
 
@@ -115,9 +111,10 @@ contract ZOSLibOwnable {
 
     /**
      * @dev Allows the current owner to relinquish control of the contract.
-     * @notice Renouncing to ownership will leave the contract without an owner.
      * It will not be possible to call the functions with the `onlyOwner`
      * modifier anymore.
+     * @notice Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
      */
     function renounceOwnership() public onlyOwner {
         emit OwnershipTransferred(_owner, address(0));
@@ -141,6 +138,8 @@ contract ZOSLibOwnable {
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
     }
+
+    uint256[50] private ______gap;
 }
 
 // File: contracts/AvatarNameStorage.sol
@@ -189,8 +188,7 @@ pragma solidity ^0.5.0;
 
 
 
-
-contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
+contract AvatarNameRegistry is Ownable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
@@ -210,7 +208,7 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
         allowed[_owner] = true;
 
         // Owner
-        transferOwnership(_owner);
+        Ownable.initialize(_owner);
     }
 
     /**

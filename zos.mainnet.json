@@ -1,29 +1,183 @@
 {
   "contracts": {
     "AvatarNameRegistry": {
-      "address": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB",
-      "constructorCode": "608060405234801561001057600080fd5b50611f71806100206000396000f3fe",
-      "bodyBytecodeHash": "b65ff14b7adf0dcd5612610e0459b3126541dc7c3cce2f43fd84155e80210301",
-      "localBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
-      "deployedBytecodeHash": "c8c837cfacae4edb7d5b512fff4dbd00417324f6e771f89cee6bd469a401dd4c",
-      "types": null,
-      "storage": null
+      "address": "0x894b883905bfEe2CC448880F1b59f4A762E67566",
+      "constructorCode": "608060405234801561001057600080fd5b506116a0806100206000396000f3fe",
+      "bodyBytecodeHash": "44997914042cec11269c32c616f523d0c91712eb4c61ef87cd5d9b87dc81ca01",
+      "localBytecodeHash": "36b70cc4bb9a77f2c72d4afe57d3515c0125d5e649acac579776cea5fb8c7649",
+      "deployedBytecodeHash": "36b70cc4bb9a77f2c72d4afe57d3515c0125d5e649acac579776cea5fb8c7649",
+      "types": {
+        "t_bool": {
+          "id": "t_bool",
+          "kind": "elementary",
+          "label": "bool"
+        },
+        "t_uint256": {
+          "id": "t_uint256",
+          "kind": "elementary",
+          "label": "uint256"
+        },
+        "t_array:50<t_uint256>": {
+          "id": "t_array:50<t_uint256>",
+          "valueType": "t_uint256",
+          "length": "50",
+          "kind": "array",
+          "label": "uint256[50]"
+        },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
+        "t_mapping<t_address>": {
+          "id": "t_mapping<t_address>",
+          "valueType": "t_address",
+          "label": "mapping(key => address)",
+          "kind": "mapping"
+        },
+        "t_struct<AvatarNameStorage.Data>": {
+          "id": "t_struct<AvatarNameStorage.Data>",
+          "kind": "struct",
+          "label": "AvatarNameStorage.Data",
+          "members": [
+            {
+              "label": "username",
+              "astId": 375,
+              "type": "t_string",
+              "src": "472:15:1"
+            },
+            {
+              "label": "metadata",
+              "astId": 377,
+              "type": "t_string",
+              "src": "497:15:1"
+            }
+          ]
+        },
+        "t_string": {
+          "id": "t_string",
+          "kind": "elementary",
+          "label": "string"
+        },
+        "t_mapping<t_struct<AvatarNameStorage.Data>>": {
+          "id": "t_mapping<t_struct<AvatarNameStorage.Data>>",
+          "valueType": "t_struct<AvatarNameStorage.Data>",
+          "label": "mapping(key => AvatarNameStorage.Data)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_bool>": {
+          "id": "t_mapping<t_bool>",
+          "valueType": "t_bool",
+          "label": "mapping(key => bool)",
+          "kind": "mapping"
+        }
+      },
+      "storage": [
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initialized",
+          "astId": 595,
+          "type": "t_bool",
+          "src": "757:24:4"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initializing",
+          "astId": 597,
+          "type": "t_bool",
+          "src": "876:25:4"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "______gap",
+          "astId": 653,
+          "type": "t_array:50<t_uint256>",
+          "src": "1951:29:4"
+        },
+        {
+          "contract": "Ownable",
+          "path": "openzeppelin-eth/contracts/ownership/Ownable.sol",
+          "label": "_owner",
+          "astId": 479,
+          "type": "t_address",
+          "src": "302:22:3"
+        },
+        {
+          "contract": "Ownable",
+          "path": "openzeppelin-eth/contracts/ownership/Ownable.sol",
+          "label": "______gap",
+          "astId": 590,
+          "type": "t_array:50<t_uint256>",
+          "src": "2262:29:3"
+        },
+        {
+          "contract": "AvatarNameStorage",
+          "path": "contracts/AvatarNameStorage.sol",
+          "label": "manaToken",
+          "astId": 371,
+          "type": "t_address",
+          "src": "386:31:1"
+        },
+        {
+          "contract": "AvatarNameStorage",
+          "path": "contracts/AvatarNameStorage.sol",
+          "label": "price",
+          "astId": 373,
+          "type": "t_uint256",
+          "src": "423:20:1"
+        },
+        {
+          "contract": "AvatarNameStorage",
+          "path": "contracts/AvatarNameStorage.sol",
+          "label": "usernames",
+          "astId": 382,
+          "type": "t_mapping<t_address>",
+          "src": "554:37:1"
+        },
+        {
+          "contract": "AvatarNameStorage",
+          "path": "contracts/AvatarNameStorage.sol",
+          "label": "user",
+          "astId": 386,
+          "type": "t_mapping<t_struct<AvatarNameStorage.Data>>",
+          "src": "624:37:1"
+        },
+        {
+          "contract": "AvatarNameStorage",
+          "path": "contracts/AvatarNameStorage.sol",
+          "label": "allowed",
+          "astId": 390,
+          "type": "t_mapping<t_bool>",
+          "src": "695:40:1"
+        }
+      ],
+      "warnings": {
+        "hasConstructor": false,
+        "hasSelfDestruct": false,
+        "hasDelegateCall": false,
+        "hasInitialValuesInDeclarations": false,
+        "uninitializedBaseContracts": []
+      }
     }
   },
   "solidityLibs": {},
   "proxies": {
-    "Avatars/AvatarNameRegistry": [
+    "avatars-contract/AvatarNameRegistry": [
       {
-        "address": "0x9CBd5A755cd066a9b5Ff52c350cA501497F57336",
-        "version": "0.1.0",
-        "implementation": "0x9A98fDa0160471EBCEeFb3cc8bF97a846499B8EB",
-        "admin": "0xefc549434a03756f6e37a43757a2927605d8839b"
+        "address": "0xcd816354450015A5644857FEd507afEeaE7263af",
+        "version": "1.0.0",
+        "implementation": "0x894b883905bfEe2CC448880F1b59f4A762E67566",
+        "kind": "Upgradeable",
+        "admin": "0xBCAc4dafB7e215f2F6cb3312aF6D5e4F9d9E7eDA"
       }
     ]
   },
   "zosversion": "2.2",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "proxyAdmin": {
-    "address": "0x397E585d3d08450777F2B125e440A7B8eAfb7330"
+    "address": "0xcABF631Ce619FD0e46194EFA335e04940ec20910"
   }
 }

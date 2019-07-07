@@ -1,11 +1,10 @@
 pragma solidity ^0.5.0;
 
-import "zos-lib/contracts/Initializable.sol";
-import "zos-lib/contracts/ownership/Ownable.sol";
+import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 import "./AvatarNameStorage.sol";
 
 
-contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
+contract AvatarNameRegistry is Ownable, AvatarNameStorage {
 
     /**
     * @dev Initializer of the contract
@@ -25,7 +24,7 @@ contract AvatarNameRegistry is ZOSLibOwnable, Initializable, AvatarNameStorage {
         allowed[_owner] = true;
 
         // Owner
-        transferOwnership(_owner);
+        Ownable.initialize(_owner);
     }
 
     /**
