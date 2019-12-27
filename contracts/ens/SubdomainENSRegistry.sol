@@ -88,28 +88,23 @@ contract SubdomainENS is ERC721Full, Ownable {
         _requireBalance(_beneficiary);
         // Make sure this contract owns the domain
         require(registry.owner(domainNamehash) == address(this), "this contract should own the domain");
-        //create labelhash for the sub domain
+        // Create labelhash for the sub domain
         bytes32 subdomainLabelhash = keccak256(abi.encodePacked(_subdomain));
-        //create namehash for the sub domain
+        // Create namehash for the sub domain
         bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, subdomainLabelhash));
-        //make sure it is free or owned by the sender
-        require(
-            registry.owner(subdomainNamehash) == address(0) ||
-            registry.owner(subdomainNamehash) == msg.sender, "sub domain already owned"
-        );
+        // Make sure it is free
+        require(registry.owner(subdomainNamehash) == address(0), "sub domain already owned");
         // Create new subdomain, temporarily this smartcontract is the owner
         registry.setSubnodeOwner(domainNamehash, subdomainLabelhash, address(this));
         // Set public resolver for this domain
         registry.setResolver(subdomainNamehash, address(resolver));
         // Set the destination address
         resolver.setAddr(subdomainNamehash, _beneficiary);
-        // Change the ownership back to requested owner
-        // registry.setOwner(subdomainNamehash, _owner);
-
-        _mint(_beneficiary, uint256(subdomainNamehash));
-
-        subdomains[subdomainNamehash] = _subdomain;
-
+        // Mint an ERC721 token with the sud domain label hash as its id
+        _mint(_beneficiary, uint256(subdomainLabelhash));
+        // Map the ERC721 token id with the sub domain for reversion.
+        subdomains[subdomainLabelhash] = _subdomain;
+        // Emit sub domain creation event
         emit SubdomainCreated(msg.sender, _beneficiary, _subdomain, domain, topdomain);
     }
 
@@ -145,6 +140,13 @@ contract SubdomainENS is ERC721Full, Ownable {
     function reclaim(uint256 _tokenId) public onlyOwner {
         base.reclaim(_tokenId, address(this));
     }
+
+    /**
+	 * @dev Renew domain (e.g. "dcl").
+     * @notice that a domain has an expiration date set on the base registrar contract.
+     */
+    //function renew(uint256 _tokenId, duration id) public onlyOwner {
+    // }
 
     /**
 	 * @dev The contract owner can take away the ownership of any domain owned by this contract.
