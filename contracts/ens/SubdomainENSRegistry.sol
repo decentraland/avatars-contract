@@ -147,10 +147,10 @@ contract SubdomainENS is ERC721Full, Ownable {
     /**
 	 * @dev The contract owner can take away the ownership of any domain owned by this contract.
 	 * @param _owner - new owner for the domain.
-     * @param _tokenId - erc721 token id which represents the node (domain).
+     * @param _nodeId - erc721 token id which represents the node (domain).
 	 */
     function transferDomainOwnership(address _owner, uint256 _nodeId) public onlyOwner {
-        base.transferFrom(address(this), _owner, _tokenId);
+        base.transferFrom(address(this), _owner, _nodeId);
         emit OwnershipTransferred(address(this), _owner);
     }
 

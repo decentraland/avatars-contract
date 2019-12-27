@@ -1193,7 +1193,6 @@ contract SubdomainENS is ERC721Full, Ownable {
     uint256 public price = 100000000000000000000; // 100 in wei
 
     event SubdomainCreated(address indexed creator, address indexed owner, string subdomain, string domain, string topdomain);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RegistryUpdated(IENSRegistry indexed previousRegistry, IENSRegistry indexed newRegistry);
     event ResolverUpdated(IENSResolver indexed previousResolver, IENSResolver indexed newResolver);
 
@@ -1251,40 +1250,26 @@ contract SubdomainENS is ERC721Full, Ownable {
         _requireBalance(_beneficiary);
         // Make sure this contract owns the domain
         require(registry.owner(domainNamehash) == address(this), "this contract should own the domain");
-        //create labelhash for the sub domain
+        // Create labelhash for the sub domain
         bytes32 subdomainLabelhash = keccak256(abi.encodePacked(_subdomain));
-        //create namehash for the sub domain
+        // Create namehash for the sub domain
         bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, subdomainLabelhash));
-        //make sure it is free or owned by the sender
-        require(
-            registry.owner(subdomainNamehash) == address(0) ||
-            registry.owner(subdomainNamehash) == msg.sender, "sub domain already owned"
-        );
+        // Make sure it is free
+        require(registry.owner(subdomainNamehash) == address(0), "sub domain already owned");
         // Create new subdomain, temporarily this smartcontract is the owner
         registry.setSubnodeOwner(domainNamehash, subdomainLabelhash, address(this));
         // Set public resolver for this domain
         registry.setResolver(subdomainNamehash, address(resolver));
         // Set the destination address
         resolver.setAddr(subdomainNamehash, _beneficiary);
-        // Change the ownership back to requested owner
-        // registry.setOwner(subdomainNamehash, _owner);
-
-        _mint(_beneficiary, uint256(subdomainNamehash));
-
-        subdomains[subdomainNamehash] = _subdomain;
-
+        // Mint an ERC721 token with the sud domain label hash as its id
+        _mint(_beneficiary, uint256(subdomainLabelhash));
+        // Map the ERC721 token id with the sub domain for reversion.
+        subdomains[subdomainLabelhash] = _subdomain;
+        // Emit sub domain creation event
         emit SubdomainCreated(msg.sender, _beneficiary, _subdomain, domain, topdomain);
     }
 
-	/**
-    * @dev Return the target address where the sub domain is pointing to (e.g. "0x12345...").
-    * @param _subdomain - sub domain name only e.g. "nacho".
-    */
-    function subdomainTarget(string memory _subdomain) public view returns (address) {
-        bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, keccak256(abi.encodePacked(_subdomain))));
-        address currentResolver = registry.resolver(subdomainNamehash);
-        return IENSResolver(currentResolver).addr(subdomainNamehash);
-    }
 
     /**
     * @dev Return the target address where the sub domain is pointing to (e.g. "0x12345...").
@@ -1292,9 +1277,22 @@ contract SubdomainENS is ERC721Full, Ownable {
     * @param _target - address that resolve the address.
     */
     function setSubdomainTarget(string memory _subdomain, address _target) public {
-        bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, keccak256(abi.encodePacked(_subdomain))));
+        // Create labelhash for the sub domain
+        bytes32 subdomainLabelhash = keccak256(abi.encodePacked(_subdomain));
+
+        // Check if the update is possible
+        require(
+            _isApprovedOrOwner(msg.sender, uint256(subdomainLabelhash)),
+            "Only an authorized account can change the sub domain settings"
+        );
+
+        // Create namehash for the sub domain
+        bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, subdomainLabelhash));
+
+        // Get Resolver of the sub domain
         address currentResolver = registry.resolver(subdomainNamehash);
-        //set the destination address
+
+        // Set the new target address
         IENSResolver(currentResolver).setAddr(subdomainNamehash, _target);
     }
 
@@ -1312,10 +1310,11 @@ contract SubdomainENS is ERC721Full, Ownable {
     /**
 	 * @dev The contract owner can take away the ownership of any domain owned by this contract.
 	 * @param _owner - new owner for the domain.
-     * @param _tokenId - erc721 token id which represents the node (domain).
+     * @param _nodeId - erc721 token id which represents the node (domain).
 	 */
-    function transferDomainOwnership(address _owner, uint256 _tokenId) public onlyOwner {
-        base.transferFrom(address(this), _owner, _tokenId);
+    function transferDomainOwnership(address _owner, uint256 _nodeId) public onlyOwner {
+        base.transferFrom(address(this), _owner, _nodeId);
+        emit OwnershipTransferred(address(this), _owner);
     }
 
 	/**
@@ -1324,7 +1323,9 @@ contract SubdomainENS is ERC721Full, Ownable {
 	 */
     function updateRegistry(IENSRegistry _registry) public onlyOwner {
         require(registry != _registry, "new registry should be different from old");
+
         emit RegistryUpdated(registry, _registry);
+
         registry = _registry;
     }
 
@@ -1334,7 +1335,9 @@ contract SubdomainENS is ERC721Full, Ownable {
 	 */
     function updateResolver(IENSResolver _resolver) public onlyOwner {
         require(resolver != _resolver, "new resolver should be different from old");
+
         emit ResolverUpdated(resolver, _resolver);
+
         resolver = _resolver;
     }
 
@@ -1348,8 +1351,19 @@ contract SubdomainENS is ERC721Full, Ownable {
 
         require(currentResolver != address(resolver), "The resolver is up to date");
 
-        //update to resolver for this subdomain
+        // Update to resolver for this subdomain
         registry.setResolver(subdomainNamehash, address(resolver));
+    }
+
+    /**
+    * @dev Return the target address where the sub domain is pointing to (e.g. "0x12345...").
+    * @param _subdomain - sub domain name only e.g. "nacho".
+    */
+    function subdomainTarget(string memory _subdomain) public view returns (address) {
+        bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, keccak256(abi.encodePacked(_subdomain))));
+        address currentResolver = registry.resolver(subdomainNamehash);
+
+        return IENSResolver(currentResolver).addr(subdomainNamehash);
     }
 
     /**
