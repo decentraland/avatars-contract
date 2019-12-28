@@ -6,7 +6,7 @@ const expect = require('chai').use(require('bn-chai')(BN)).expect
 
 const Avatars = artifacts.require('AvatarNameRegistry')
 
-describe('Avatars', function() {
+describe.skip('Avatars', function() {
   this.timeout(100000)
 
   // globals

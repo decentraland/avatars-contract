@@ -3,16 +3,16 @@ pragma solidity ^0.5.15;
 
 import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 import "openzeppelin-eth/contracts/token/ERC721/ERC721Full.sol";
-import "openzeppelin-eth/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IENSRegistry.sol";
 import "../interfaces/IENSResolver.sol";
 import "../interfaces/IBaseRegistrar.sol";
+import "../interfaces/IERC20Token.sol";
 
 
-contract SubdomainENS is ERC721Full, Ownable {
+contract SubdomainENSRegistry is ERC721Full, Ownable {
 
-    IERC20 public acceptedToken;
+    IERC20Token public acceptedToken;
 
     IENSRegistry public registry;
     IENSResolver public resolver;
@@ -44,7 +44,7 @@ contract SubdomainENS is ERC721Full, Ownable {
      * @param _owner - address of the owner allowed to register usernames and assign the role.
 	 */
     function initialize(
-        IERC20 _acceptedToken,
+        IERC20Token _acceptedToken,
         IENSRegistry _registry,
         IENSResolver _resolver,
         IBaseRegistrar _base,
@@ -103,6 +103,10 @@ contract SubdomainENS is ERC721Full, Ownable {
         _mint(_beneficiary, uint256(subdomainLabelhash));
         // Map the ERC721 token id with the sub domain for reversion.
         subdomains[subdomainLabelhash] = _subdomain;
+        // Debit `price` from _beneficiary
+        acceptedToken.transferFrom(_beneficiary, address(this), price);
+        // Burn it
+        acceptedToken.burn(price);
         // Emit sub domain creation event
         emit SubdomainCreated(msg.sender, _beneficiary, _subdomain, domain, topdomain);
     }
