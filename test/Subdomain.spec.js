@@ -196,7 +196,7 @@ describe('SubdomainENSRegistry', function() {
     })
   })
 
-  describe('migrate', function() {
+  describe.skip('migrate', function() {
     it('should migrate a name to a subdomain', async function() {
       const { receipt } = await subdomainContract.migrateNames(
         [web3.utils.fromAscii(subdomain1 + Math.random())],
@@ -207,7 +207,7 @@ describe('SubdomainENSRegistry', function() {
   })
 
   describe('register', function() {
-    it('should register a subdomain', async function() {
+    it('should register a name', async function() {
       const { logs } = await subdomainContract.register(subdomain1, user)
       expect(logs.length).to.be.equal(2)
       expect(logs[1].event).to.be.equal('SubdomainCreated')
@@ -234,6 +234,33 @@ describe('SubdomainENSRegistry', function() {
 
       const subdomainOwner = await ensRegistryContract.owner(subdomainHash)
       expect(subdomainOwner).to.be.equal(subdomainContract.address)
+    })
+
+    it.skip('should register a name with special characters', async function() {})
+
+    it('reverts when trying to register a name already used', async function() {
+      await subdomainContract.register(subdomain1, user)
+      assertRevert(
+        subdomainContract.register(subdomain1, user),
+        'sub domain already owned'
+      )
+    })
+
+    it('reverts when trying to register a name with no balance', async function() {
+      const balance = await manaContract.balanceOf(user)
+      await manaContract.burn(balance, fromUser)
+      assertRevert(
+        subdomainContract.register(subdomain1, user),
+        'Insufficient funds'
+      )
+    })
+
+    it('reverts when trying to register a name without approval', async function() {
+      await manaContract.approve(subdomainContract.address, 0, fromUser)
+      assertRevert(
+        subdomainContract.register(subdomain1, user),
+        'The contract is not authorized to use the accepted token on sender behalf'
+      )
     })
   })
 })
