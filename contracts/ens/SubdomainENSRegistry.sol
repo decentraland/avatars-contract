@@ -12,6 +12,8 @@ import "../interfaces/IERC20Token.sol";
 
 contract SubdomainENSRegistry is ERC721Full, Ownable {
 
+    bytes4 public constant ERC721_RECEIVED = 0x150b7a02;
+
     IERC20Token public acceptedToken;
 
     IENSRegistry public registry;
@@ -25,13 +27,15 @@ contract SubdomainENSRegistry is ERC721Full, Ownable {
     bytes32 public domainNamehash;
     bytes32 emptyNamehash = 0x00;
 
+
     mapping (bytes32 => string) public subdomains;
 
     uint256 public price = 100000000000000000000; // 100 in wei
 
-    event SubdomainCreated(address indexed creator, address indexed owner, string subdomain, string domain, string topdomain);
+    event SubdomainCreated(address indexed owner, string subdomain);
     event RegistryUpdated(IENSRegistry indexed previousRegistry, IENSRegistry indexed newRegistry);
     event ResolverUpdated(IENSResolver indexed previousResolver, IENSResolver indexed newResolver);
+
 
      /**
 	 * @dev Initializer of the contract.
@@ -76,13 +80,36 @@ contract SubdomainENSRegistry is ERC721Full, Ownable {
         Ownable.initialize(_owner);
     }
 
+    // @TODO: wip method
+    function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external {
+        for (uint256 i = 0; i < _names.length; i++) {
+            string memory name = _bytes32ToString(_names[i]);
+            bytes32 subdomainLabelhash = keccak256(abi.encodePacked(name));
+            // // Create namehash for the sub domain
+            // bytes32 subdomainNamehash = keccak256(abi.encodePacked(domainNamehash, subdomainLabelhash));
+            // Create new subdomain, temporarily this smartcontract is the owner
+            // registry.setSubnodeOwner(domainNamehash, subdomainLabelhash, address(this));
+            // // Set public resolver for this domain
+            // registry.setResolver(subdomainNamehash, address(resolver));
+            // // Set the destination address
+            // resolver.setAddr(subdomainNamehash, _beneficiaries[i]);
+            // Mint an ERC721 token with the sud domain label hash as its id
+            _mint(_beneficiaries[i], uint256(subdomainLabelhash));
+            // Map the ERC721 token id with the sub domain for reversion.
+            subdomains[subdomainLabelhash] = name;
+            // Emit sub domain creation event
+            emit SubdomainCreated(_beneficiaries[i], name);
+        }
+    }
+
+
     /**
 	 * @dev Allows to create a subdomain (e.g. "nacho.dcl.eth"), set its resolver, owner and target address.
 	 * @param _subdomain - sub domain  (e.g. "nacho").
 	 * @param _beneficiary - address that will become owner of this new sub domain. The sub domain
      * will resolve to this address too.
 	 */
-    function newSubdomain(string memory _subdomain, address _beneficiary) public {
+    function register(string memory _subdomain, address _beneficiary) public {
         // Check if the user has at least `price` and the contract has allowance to use on its behalf
         _requireBalance(_beneficiary);
         // Make sure this contract owns the domain
@@ -108,12 +135,12 @@ contract SubdomainENSRegistry is ERC721Full, Ownable {
         // Burn it
         acceptedToken.burn(price);
         // Emit sub domain creation event
-        emit SubdomainCreated(msg.sender, _beneficiary, _subdomain, domain, topdomain);
+        emit SubdomainCreated(_beneficiary, _subdomain);
     }
 
 
     /**
-    * @dev Return the target address where the sub domain is pointing to (e.g. "0x12345...").
+    * @dev Set the target address where the sub domain will point to (e.g. "0x12345...").
     * @param _subdomain - sub domain name only e.g. "nacho".
     * @param _target - address that resolve the address.
     */
@@ -146,6 +173,32 @@ contract SubdomainENSRegistry is ERC721Full, Ownable {
      */
     function reclaim(uint256 _tokenId) public onlyOwner {
         base.reclaim(_tokenId, address(this));
+    }
+
+    /**
+    * @dev The ERC721 smart contract calls this function on the recipient
+    * after a `safetransfer`. This function MAY throw to revert and reject the
+    * transfer. Return of other than the magic value MUST result in the
+    * transaction being reverted.
+    * Note: the contract address is always the message sender.
+    * @notice Handle the receipt of an NFT. Used to re-claim ownership at the ENS registry contract
+    * @param _tokenId The NFT identifier which is being transferred
+    * @return `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+    */
+    function onERC721Received(
+        address /* _operator */,
+        address /* _from */,
+        uint256 _tokenId,
+        bytes memory /* _data */
+    )
+        public
+        returns (bytes4)
+    {
+        require(msg.sender == address(base), "only base can send NFTs to this contract");
+
+        // Re-claim to update the owner at the ENS Registry
+        base.reclaim(_tokenId, address(this));
+        return ERC721_RECEIVED;
     }
 
     /**
@@ -221,5 +274,27 @@ contract SubdomainENSRegistry is ERC721Full, Ownable {
             acceptedToken.allowance(_user, address(this)) >= price,
             "The contract is not authorized to use the accepted token on sender behalf"
         );
+    }
+
+     /**
+     * @dev Convert bytes32 to string.
+     * @param _x - to be converted to string.
+     * @return string
+     */
+    function _bytes32ToString(bytes32 _x) internal pure returns (string memory) {
+        bytes memory bytesString = new bytes(32);
+        uint charCount = 0;
+        for (uint j = 0; j < 32; j++) {
+            byte char = byte(bytes32(uint(_x) * 2 ** (8 * j)));
+            if (char != 0) {
+                bytesString[charCount] = char;
+                charCount++;
+            }
+        }
+        bytes memory bytesStringTrimmed = new bytes(charCount);
+        for (uint j = 0; j < charCount; j++) {
+            bytesStringTrimmed[j] = bytesString[j];
+        }
+        return string(bytesStringTrimmed);
     }
 }

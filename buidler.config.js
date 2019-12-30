@@ -12,6 +12,10 @@ usePlugin('@nomiclabs/buidler-truffle5')
 module.exports = {
   defaultNetwork: 'buidlerevm',
   solc: {
-    version: '0.5.15'
+    version: '0.5.15',
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
   }
 }

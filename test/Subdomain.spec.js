@@ -13,13 +13,16 @@ const ENSPublicResolver = artifacts.require('ENSPublicResolver')
 describe('SubdomainENSRegistry', function() {
   this.timeout(100000)
 
+  const TOP_DOMAIN = 'eth'
+  const DOMAIN = 'dcl'
+
   // globals
-  const subdomain = 'nacho'
+  const subdomain1 = 'nacho'
   const ZERO_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
 
-  const ethLabelHash = web3.utils.sha3('eth')
-  const dclLabelHash = web3.utils.sha3('dcl')
+  const ethLabelHash = web3.utils.sha3(TOP_DOMAIN)
+  const dclLabelHash = web3.utils.sha3(DOMAIN)
 
   const ethTopdomainHash = web3.utils.sha3(
     web3.eth.abi.encodeParameters(
@@ -138,15 +141,22 @@ describe('SubdomainENSRegistry', function() {
 
     // Deploy dcl subdomain contract
     subdomainContract = await SubdomainENSRegistry.new(creationParams)
-
-    subdomainContract.initialize(
+    await subdomainContract.initialize(
       manaContract.address,
       ensRegistryContract.address,
       publicResolverContract.address,
       baseRegistrarContract.address,
-      'eth',
-      'dcl',
-      owner
+      TOP_DOMAIN,
+      DOMAIN,
+      deployer
+    )
+
+    // Transfer DCL domain
+    await baseRegistrarContract.safeTransferFrom(
+      deployer,
+      subdomainContract.address,
+      dclLabelHash,
+      fromDeployer
     )
 
     await mana.authorize(subdomainContract.address)
@@ -157,8 +167,73 @@ describe('SubdomainENSRegistry', function() {
       const acceptedToken = await subdomainContract.acceptedToken()
       expect(acceptedToken).to.be.equal(manaContract.address)
 
+      const registry = await subdomainContract.registry()
+      expect(registry).to.be.equal(ensRegistryContract.address)
+
+      const resolver = await subdomainContract.resolver()
+      expect(resolver).to.be.equal(publicResolverContract.address)
+
+      const base = await subdomainContract.base()
+      expect(base).to.be.equal(baseRegistrarContract.address)
+
+      const topdomain = await subdomainContract.topdomain()
+      expect(topdomain).to.be.equal(TOP_DOMAIN)
+
+      const domain = await subdomainContract.domain()
+      expect(domain).to.be.equal(DOMAIN)
+
+      const topdomainHash = await subdomainContract.topdomainNamehash()
+      expect(topdomainHash).to.be.equal(ethTopdomainHash)
+
+      const domainHash = await subdomainContract.domainNamehash()
+      expect(domainHash).to.be.equal(dclDomainHash)
+
+      const owner = await subdomainContract.owner()
+      expect(owner).to.be.equal(deployer)
+
       const ownerOfDCL = await ensRegistryContract.owner(dclDomainHash)
-      expect(ownerOfDCL).to.be.equal(deployer)
+      expect(ownerOfDCL).to.be.equal(subdomainContract.address)
+    })
+  })
+
+  describe('migrate', function() {
+    it('should migrate a name to a subdomain', async function() {
+      const { receipt } = await subdomainContract.migrateNames(
+        [web3.utils.fromAscii(subdomain1 + Math.random())],
+        [user]
+      )
+      console.log(receipt.gasUsed)
+    })
+  })
+
+  describe('register', function() {
+    it('should register a subdomain', async function() {
+      const { logs } = await subdomainContract.register(subdomain1, user)
+      expect(logs.length).to.be.equal(2)
+      expect(logs[1].event).to.be.equal('SubdomainCreated')
+      expect(logs[1].args.owner).to.be.equal(user)
+      expect(logs[1].args.subdomain).to.be.equal(subdomain1)
+
+      const balanceOfUser = await subdomainContract.balanceOf(user)
+      expect(balanceOfUser).to.eq.BN(1)
+
+      const tokenId = await subdomainContract.tokenOfOwnerByIndex(user, 0)
+      const subdomain = await subdomainContract.subdomains(tokenId)
+
+      expect(subdomain).to.be.equal(subdomain1)
+
+      const target = await subdomainContract.subdomainTarget(subdomain1)
+      expect(target).to.be.equal(user)
+
+      const subdomainHash = web3.utils.sha3(
+        web3.eth.abi.encodeParameters(
+          ['bytes32', 'bytes32'],
+          [dclDomainHash, web3.utils.sha3(subdomain1)]
+        )
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomainHash)
+      expect(subdomainOwner).to.be.equal(subdomainContract.address)
     })
   })
 })
