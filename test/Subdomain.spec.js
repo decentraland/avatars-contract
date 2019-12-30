@@ -5,7 +5,7 @@ const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
 
 const IENSRegistry = artifacts.require('IENSRegistry')
-const SubdomainENSRegistry = artifacts.require('SubdomainENSRegistry')
+const SubdomainENSRegistry = artifacts.require('FakeSubdomainENSRegistry')
 const FakeENSRegistryFactory = artifacts.require('FakeENSRegistryFactory')
 const ENSBaseRegistrar = artifacts.require('ENSBaseRegistrar')
 const ENSPublicResolver = artifacts.require('ENSPublicResolver')
@@ -13,13 +13,15 @@ const ENSPublicResolver = artifacts.require('ENSPublicResolver')
 describe('SubdomainENSRegistry', function() {
   this.timeout(100000)
 
+  // globals
   const TOP_DOMAIN = 'eth'
   const DOMAIN = 'dcl'
-
-  // globals
-  const subdomain1 = 'nacho'
+  const PRICE = new BN('100000000000000000000')
+  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
   const ZERO_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
+  const subdomain1 = 'nacho'
+  const subdomain1LabelHash = web3.utils.sha3(subdomain1)
 
   const ethLabelHash = web3.utils.sha3(TOP_DOMAIN)
   const dclLabelHash = web3.utils.sha3(DOMAIN)
@@ -57,20 +59,6 @@ describe('SubdomainENSRegistry', function() {
   let baseRegistrarContract
   let publicResolverContract
   let subdomainContract
-
-  // function checkRegisterEvent(
-  //   _log,
-  //   _owner,
-  //   _caller = owner,
-  //   _username = username,
-  //   _metadata = metadata
-  // ) {
-  //   expect(_log.event).to.be.equal('Register')
-  //   expect(_log.args._owner).to.be.equal(_owner)
-  //   expect(_log.args._username).to.be.equal(_username)
-  //   expect(_log.args._metadata).to.be.equal(_metadata)
-  //   expect(_log.args._caller).to.be.equal(_caller)
-  // }
 
   beforeEach(async function() {
     // Create Listing environment
@@ -196,7 +184,7 @@ describe('SubdomainENSRegistry', function() {
     })
   })
 
-  describe.skip('migrate', function() {
+  describe('Migrate', function() {
     it('should migrate a name to a subdomain', async function() {
       const { receipt } = await subdomainContract.migrateNames(
         [web3.utils.fromAscii(subdomain1 + Math.random())],
@@ -206,13 +194,39 @@ describe('SubdomainENSRegistry', function() {
     })
   })
 
-  describe('register', function() {
+  describe('Register', function() {
     it('should register a name', async function() {
-      const { logs } = await subdomainContract.register(subdomain1, user)
-      expect(logs.length).to.be.equal(2)
-      expect(logs[1].event).to.be.equal('SubdomainCreated')
-      expect(logs[1].args.owner).to.be.equal(user)
-      expect(logs[1].args.subdomain).to.be.equal(subdomain1)
+      const { logs } = await subdomainContract.register(
+        subdomain1,
+        user,
+        fromUser
+      )
+      expect(logs.length).to.be.equal(4)
+
+      const newOwnerLog = logs[0]
+      expect(newOwnerLog.event).to.be.equal('NewOwner')
+      expect(newOwnerLog.args.node).to.be.equal(dclDomainHash)
+      expect(newOwnerLog.args.label).to.be.equal(subdomain1LabelHash)
+      expect(newOwnerLog.args.owner).to.be.equal(user)
+
+      const transferLog = logs[1]
+      expect(transferLog.event).to.be.equal('Transfer')
+      expect(transferLog.args.from).to.be.equal(ZERO_ADDRESS)
+      expect(transferLog.args.to).to.be.equal(user)
+      expect(transferLog.args.tokenId).to.eq.BN(
+        web3.utils.toBN(subdomain1LabelHash)
+      )
+
+      const burnLog = logs[2]
+      expect(burnLog.event).to.be.equal('Burn')
+      expect(burnLog.args.burner).to.be.equal(subdomainContract.address)
+      expect(burnLog.args.value).to.eq.BN(PRICE)
+
+      const subdomainCreatedLog = logs[3]
+      expect(subdomainCreatedLog.event).to.be.equal('SubdomainCreated')
+      expect(subdomainCreatedLog.args._caller).to.be.equal(user)
+      expect(subdomainCreatedLog.args._beneficiary).to.be.equal(user)
+      expect(subdomainCreatedLog.args._subdomain).to.be.equal(subdomain1)
 
       const balanceOfUser = await subdomainContract.balanceOf(user)
       expect(balanceOfUser).to.eq.BN(1)
@@ -222,25 +236,27 @@ describe('SubdomainENSRegistry', function() {
 
       expect(subdomain).to.be.equal(subdomain1)
 
-      const target = await subdomainContract.subdomainTarget(subdomain1)
-      expect(target).to.be.equal(user)
-
       const subdomainHash = web3.utils.sha3(
         web3.eth.abi.encodeParameters(
           ['bytes32', 'bytes32'],
-          [dclDomainHash, web3.utils.sha3(subdomain1)]
+          [dclDomainHash, subdomain1LabelHash]
         )
       )
 
       const subdomainOwner = await ensRegistryContract.owner(subdomainHash)
-      expect(subdomainOwner).to.be.equal(subdomainContract.address)
+      expect(subdomainOwner).to.be.equal(user)
+
+      const currentResolver = await ensRegistryContract.resolver(subdomainHash)
+      expect(currentResolver).to.be.equal(ZERO_ADDRESS)
     })
 
-    it.skip('should register a name with special characters', async function() {})
+    it('should register a name with special characters', async function() {
+      await subdomainContract.register('spEC()#$cial name', user, fromUser)
+    })
 
     it('reverts when trying to register a name already used', async function() {
       await subdomainContract.register(subdomain1, user)
-      assertRevert(
+      await assertRevert(
         subdomainContract.register(subdomain1, user),
         'sub domain already owned'
       )
@@ -249,17 +265,97 @@ describe('SubdomainENSRegistry', function() {
     it('reverts when trying to register a name with no balance', async function() {
       const balance = await manaContract.balanceOf(user)
       await manaContract.burn(balance, fromUser)
-      assertRevert(
-        subdomainContract.register(subdomain1, user),
+      await assertRevert(
+        subdomainContract.register(subdomain1, user, fromUser),
         'Insufficient funds'
       )
     })
 
     it('reverts when trying to register a name without approval', async function() {
       await manaContract.approve(subdomainContract.address, 0, fromUser)
-      assertRevert(
-        subdomainContract.register(subdomain1, user),
+      await assertRevert(
+        subdomainContract.register(subdomain1, user, fromUser),
         'The contract is not authorized to use the accepted token on sender behalf'
+      )
+    })
+
+    it('reverts when trying to register a name for a not owned domain', async function() {
+      const contract = await SubdomainENSRegistry.new(creationParams)
+      await contract.initialize(
+        manaContract.address,
+        ensRegistryContract.address,
+        publicResolverContract.address,
+        baseRegistrarContract.address,
+        TOP_DOMAIN,
+        'dcl2',
+        deployer
+      )
+
+      await manaContract.approve(contract.address, -1, fromUser)
+
+      await assertRevert(
+        contract.register(subdomain1, user, fromUser),
+        'this contract should own the domain'
+      )
+    })
+  })
+
+  describe('Transfer', function() {
+    it('should transfer a name', async function() {
+      await subdomainContract.register(subdomain1, user, fromUser)
+      const tokenId = await subdomainContract.tokenOfOwnerByIndex(user, 0)
+      let ownerOfTokenId = await subdomainContract.ownerOf(tokenId)
+      expect(ownerOfTokenId).to.be.equal(user)
+
+      await subdomainContract.transferFrom(user, anotherUser, tokenId, fromUser)
+
+      ownerOfTokenId = await subdomainContract.ownerOf(tokenId)
+      expect(ownerOfTokenId).to.be.equal(anotherUser)
+
+      const subdomain = await subdomainContract.subdomains(tokenId)
+
+      expect(subdomain).to.be.equal(subdomain1)
+
+      const subdomainHash = web3.utils.sha3(
+        web3.eth.abi.encodeParameters(
+          ['bytes32', 'bytes32'],
+          [dclDomainHash, subdomain1LabelHash]
+        )
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomainHash)
+      expect(subdomainOwner).to.be.equal(user)
+    })
+
+    it('should safe transfer a name', async function() {
+      await subdomainContract.register(subdomain1, user)
+      const tokenId = await subdomainContract.tokenOfOwnerByIndex(user, 0)
+      let ownerOfTokenId = await subdomainContract.ownerOf(tokenId)
+      expect(ownerOfTokenId).to.be.equal(user)
+
+      await subdomainContract.safeTransferFrom(
+        user,
+        anotherUser,
+        tokenId,
+        fromUser
+      )
+
+      ownerOfTokenId = await subdomainContract.ownerOf(tokenId)
+      expect(ownerOfTokenId).to.be.equal(anotherUser)
+    })
+
+    it('should revert when transferring a not owned name', async function() {
+      await subdomainContract.register(subdomain1, user), fromUser
+      const tokenId = await subdomainContract.tokenOfOwnerByIndex(user, 0)
+
+      await assertRevert(
+        subdomainContract.safeTransferFrom(
+          user,
+          anotherUser,
+          tokenId,
+          fromHacker
+        ),
+        ''
       )
     })
   })
