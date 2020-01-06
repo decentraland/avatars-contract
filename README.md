@@ -1,4 +1,4 @@
-# Decentraland Sub domains Contract
+# Decentraland subdomains Contract
 
 ## Contracts related
 
