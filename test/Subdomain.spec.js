@@ -574,7 +574,7 @@ describe('DCL Names V2', function() {
     })
 
     describe('transferDomainOwnership', function() {
-      it.only('should transfer an owned domain', async function() {
+      it('should transfer an owned domain', async function() {
         let domainOwner = await baseRegistrarContract.ownerOf(dclLabelHash)
         expect(domainOwner).to.be.equal(dclRegistrarContract.address)
 
@@ -591,11 +591,11 @@ describe('DCL Names V2', function() {
         expect(logs[0].event).to.be.equal('Transfer')
         expect(logs[0].args.from).to.be.equal(dclRegistrarContract.address)
         expect(logs[0].args.to).to.be.equal(user)
-        // expect(logs[0].args.tokenId).to.eq.BN(dclLabelHash)
+        expect(logs[0].args.tokenId).to.eq.BN(web3.utils.toBN(dclLabelHash))
 
         expect(logs[1].event).to.be.equal('DomainTransferred')
         expect(logs[1].args._newOwner).to.be.equal(user)
-        expect(logs[1].args._tokenId).to.be.equal(dclLabelHash)
+        expect(logs[1].args._tokenId).to.eq.BN(web3.utils.toBN(dclLabelHash))
 
         domainOwner = await baseRegistrarContract.ownerOf(dclLabelHash)
         expect(domainOwner).to.be.equal(user)
@@ -634,7 +634,7 @@ describe('DCL Names V2', function() {
       })
     })
 
-    describe('Controllers', function() {
+    describe('addController', function() {
       it('should add a controller', async function() {
         let isController = await dclRegistrarContract.controllers(user)
         expect(isController).to.be.equal(false)
@@ -677,7 +677,9 @@ describe('DCL Names V2', function() {
           'The controller was already added'
         )
       })
+    })
 
+    describe('removeController', function() {
       it('should remove a controller', async function() {
         let isController = await dclRegistrarContract.controllers(user)
         expect(isController).to.be.equal(false)
@@ -731,6 +733,132 @@ describe('DCL Names V2', function() {
         await assertRevert(
           dclRegistrarContract.removeController(user, fromDeployer),
           'The controller is already disbled'
+        )
+      })
+    })
+
+    describe('updateRegistry', function() {
+      it('should update registry', async function() {
+        let registry = await dclRegistrarContract.registry()
+        expect(registry).to.be.equal(ensRegistryContract.address)
+
+        const { logs } = await dclRegistrarContract.updateRegistry(
+          baseRegistrarContract.address,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('RegistryUpdated')
+        expect(logs[0].args._previousRegistry).to.be.equal(
+          ensRegistryContract.address
+        )
+        expect(logs[0].args._newRegistry).to.be.equal(
+          baseRegistrarContract.address
+        )
+
+        registry = await dclRegistrarContract.registry()
+        expect(registry).to.be.equal(baseRegistrarContract.address)
+      })
+
+      it('reverts when updating the registry with the same contract', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateRegistry(
+            ensRegistryContract.address,
+            fromDeployer
+          ),
+          'New registry should be different from old'
+        )
+      })
+
+      it('reverts when updating the registry with an EOA', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateRegistry(user, fromDeployer),
+          'New registry should be a contract'
+        )
+      })
+
+      it('reverts when trying to update the registry by a hacker', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateRegistry(
+            baseRegistrarContract.address,
+            fromHacker
+          ),
+          'Ownable: caller is not the owner'
+        )
+      })
+    })
+
+    describe('updateBase', function() {
+      it('should update base', async function() {
+        let base = await dclRegistrarContract.base()
+        expect(base).to.be.equal(baseRegistrarContract.address)
+
+        const { logs } = await dclRegistrarContract.updateBase(
+          ensRegistryContract.address,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('BaseUpdated')
+        expect(logs[0].args._previousBase).to.be.equal(
+          baseRegistrarContract.address
+        )
+        expect(logs[0].args._newBase).to.be.equal(ensRegistryContract.address)
+
+        base = await dclRegistrarContract.base()
+        expect(base).to.be.equal(ensRegistryContract.address)
+      })
+
+      it('reverts when updating the base with the same contract', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateBase(
+            baseRegistrarContract.address,
+            fromDeployer
+          ),
+          'New base should be different from old'
+        )
+      })
+
+      it('reverts when updating the registry with an EOA', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateBase(user, fromDeployer),
+          'New base should be a contract'
+        )
+      })
+
+      it('reverts when trying to update the base by a hacker', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateRegistry(
+            ensRegistryContract.address,
+            fromHacker
+          ),
+          'Ownable: caller is not the owner'
+        )
+      })
+    })
+
+    describe('migrationFinished', function() {
+      it('should set migration as finished', async function() {
+        const { logs } = await dclRegistrarContract.migrationFinished(
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('MigrationFinished')
+      })
+
+      it('reverts when trying to set migration as finished twice', async function() {
+        await dclRegistrarContract.migrationFinished(fromDeployer)
+        await assertRevert(
+          dclRegistrarContract.migrationFinished(fromDeployer),
+          'The migration has finished'
+        )
+      })
+
+      it('reverts when trying to set migration as finished by a hacker', async function() {
+        await assertRevert(
+          dclRegistrarContract.migrationFinished(fromHacker),
+          'Ownable: caller is not the owner'
         )
       })
     })

@@ -3,6 +3,7 @@ pragma solidity ^0.5.15;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 
 import "../interfaces/IENSRegistry.sol";
 import "../interfaces/IENSResolver.sol";
@@ -11,6 +12,8 @@ import "../interfaces/IERC20Token.sol";
 
 
 contract DCLRegistrar is ERC721Full, Ownable {
+
+    using Address for address;
 
     bytes4 public constant ERC721_RECEIVED = 0x150b7a02;
 
@@ -218,6 +221,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 */
     function updateRegistry(IENSRegistry _registry) external onlyOwner {
         require(registry != _registry, "New registry should be different from old");
+        require(address(_registry).isContract(), "New registry should be a contract");
 
         emit RegistryUpdated(registry, _registry);
 
@@ -230,13 +234,14 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 */
     function updateBase(IBaseRegistrar _base) external onlyOwner {
         require(base != _base, "New base should be different from old");
+        require(address(_base).isContract(), "New base should be a contract");
 
         emit BaseUpdated(base, _base);
 
         base = _base;
     }
 
-    function migrationFinished() external onlyOwner isMigrating{
+    function migrationFinished() external onlyOwner isMigrating {
         migrated = true;
         emit MigrationFinished();
     }
