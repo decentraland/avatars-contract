@@ -114,7 +114,10 @@ contract DCLController is Ownable {
     */
     function _requireNameValid(string memory _name) internal pure {
         bytes memory tempName = bytes(_name);
-        require(tempName.length <= 15, "Name should be less than or equal 15 characters");
+        require(
+            tempName.length > 0 && tempName.length <= 15,
+            "Name should be greather than or equal to 3 and less than or equal to 15"
+        );
         for(uint256 i = 0; i < tempName.length; i++) {
             require(tempName[i] >= 0x60 && tempName[i] <= 0x7A, "Invalid Character");
         }

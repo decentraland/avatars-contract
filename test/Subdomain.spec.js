@@ -1384,7 +1384,14 @@ describe('DCL Names V2', function() {
         const bigUsername = 'abignameregistry'
         await assertRevert(
           dclControllerContract.register(bigUsername, user, fromUser),
-          'Name should be less than or equal 15 characters'
+          'Name should be greather than or equal to 3 and less than or equal to 15'
+        )
+      })
+
+      it('reverts when trying to register an empty name', async function() {
+        await assertRevert(
+          dclControllerContract.register('', user, fromUser),
+          'Name should be greather than or equal to 3 and less than or equal to 15'
         )
       })
 
