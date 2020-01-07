@@ -1537,7 +1537,7 @@ describe('DCL Names V2', function() {
       expect(target).to.be.equal(anotherUser)
     })
 
-    it('should change the resolver and target address if a reclaim is made', async function() {
+    it('should change the resolver and target address if a reclaim was made', async function() {
       await dclControllerContract.register(subdomain1, user, fromUser)
 
       await dclRegistrarContract.transferFrom(
