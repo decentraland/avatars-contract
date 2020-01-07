@@ -3,18 +3,20 @@ pragma solidity ^0.5.15;
 
 contract IDCLRegistrar {
     /**
-     * @dev Register a name.
-     * @param _name - name to be registered.
-     * @param _owner - owner of the node.
-     */
-    function register(string calldata _name, address _owner) external;
+	 * @dev Allows to create a subdomain (e.g. "nacho.dcl.eth"), set its resolver, owner and target address
+	 * @param _subdomain - subdomain  (e.g. "nacho")
+	 * @param _beneficiary - address that will become owner of this new subdomain
+	 */
+    function register(string calldata _subdomain, address _beneficiary) external;
 
-    /**
-     * @dev Reclaim ownership of a name in ENS, if you own it in the registrar.
-     * @param _id - node id.
-     * @param _owner - owner of the node.
+     /**
+	 * @dev Re-claim the ownership of a subdomain (e.g. "nacho").
+     * @notice After a subdomain is transferred by this contract, the owner in the ENS registry contract
+     * is still the old owner. Therefore, the owner should call `reclaim` to update the owner of the subdomain.
+	 * @param _tokenId - erc721 token id which represents the node (subdomain).
+     * @param _owner - new owner.
      */
-    function reclaim(uint256 _id, address _owner) external;
+    function reclaim(uint256 _tokenId, address _owner) external;
 
     /**
      * @dev Transfer a name to a new owner.
@@ -24,7 +26,11 @@ contract IDCLRegistrar {
      */
     function transferFrom(address _from, address _to, uint256 _id) public;
 
-    // Returns true if the specified name is available for registration.
-    function available(uint256 id) public view returns(bool);
+    /**
+	 * @dev Check whether a name is available to be registered or not
+	 * @param _labelhash - hash of the name to check
+     * @return whether the name is available or not
+     */
+    function available(bytes32 _labelhash) public view returns (bool);
 
 }

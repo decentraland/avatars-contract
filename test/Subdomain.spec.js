@@ -1225,7 +1225,7 @@ describe('DCL Names V2', function() {
         const { logs } = await dclControllerContract.register(
           subdomain1,
           user,
-          fromUser
+          { ...fromUser, gasPrice: MAX_GAS_PRICE }
         )
 
         expect(logs.length).to.be.equal(5)
@@ -1290,6 +1290,16 @@ describe('DCL Names V2', function() {
 
         name = 'hjklzxcvbnm'
         await dclControllerContract.register(name, user, fromUser)
+      })
+
+      it('reverts when trying to register a name with a gas parice higher than max gas price', async function() {
+        await assertRevert(
+          dclControllerContract.register(subdomain1, user, {
+            ...fromUser,
+            gasPrice: MAX_GAS_PRICE + 1
+          }),
+          'Maximum gas price allowed exceeded'
+        )
       })
 
       it('reverts when the name has invalid characters', async function() {
@@ -1395,76 +1405,340 @@ describe('DCL Names V2', function() {
         )
       })
     })
+
+    describe('updateMaxGasPrice', function() {
+      it('should update the max gas price', async function() {
+        let maxGasPrice = await dclControllerContract.maxGasPrice()
+        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+
+        const newMaxGasPrice = 1000000000
+        const { logs } = await dclControllerContract.updateMaxGasPrice(
+          newMaxGasPrice,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+
+        const newOwnerLog = logs[0]
+        expect(newOwnerLog.event).to.be.equal('MaxGasPriceChanged')
+        expect(newOwnerLog.args._oldMaxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+        expect(newOwnerLog.args._newMaxGasPrice).to.eq.BN(newMaxGasPrice)
+
+        maxGasPrice = await dclControllerContract.maxGasPrice()
+        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+      })
+
+      it('should update the max gas price to 1 gwei', async function() {
+        const newMaxGasPrice = 1000000000
+        await dclControllerContract.updateMaxGasPrice(
+          newMaxGasPrice,
+          fromDeployer
+        )
+
+        const maxGasPrice = await dclControllerContract.maxGasPrice()
+        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+      })
+
+      it('should update the max gas price to 30 gwei', async function() {
+        const newMaxGasPrice = 30000000000
+        await dclControllerContract.updateMaxGasPrice(
+          newMaxGasPrice,
+          fromDeployer
+        )
+
+        const maxGasPrice = await dclControllerContract.maxGasPrice()
+        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+      })
+
+      it('reverts when updating the max gas price by an unauthorized user', async function() {
+        const newMaxGasPrice = 10000000000
+        await assertRevert(
+          dclControllerContract.updateMaxGasPrice(newMaxGasPrice, fromHacker),
+          'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts when updating the max gas price with lower than 1 gwei', async function() {
+        await assertRevert(
+          dclControllerContract.updateMaxGasPrice(0, fromDeployer),
+          'Max gas price should be greater than or equal to 1 gwei'
+        )
+
+        await assertRevert(
+          dclControllerContract.updateMaxGasPrice(999999999, fromDeployer),
+          'Max gas price should be greater than or equal to 1 gwei'
+        )
+      })
+
+      it('reverts when updating the max gas price with the same value', async function() {
+        await assertRevert(
+          dclControllerContract.updateMaxGasPrice(MAX_GAS_PRICE, fromDeployer),
+          'Max gas price should be different'
+        )
+      })
+    })
   })
 
-  describe('updateMaxGasPrice', function() {
-    it('should update the max gas price', async function() {
-      let maxGasPrice = await dclControllerContract.maxGasPrice()
-      expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+  describe('ENS ecosystem', function() {
+    it('should set a resolver and target address', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
 
-      const newMaxGasPrice = 1000000000
-      const { logs } = await dclControllerContract.updateMaxGasPrice(
-        newMaxGasPrice,
-        fromDeployer
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(user)
+
+      await ensRegistryContract.setResolver(
+        subdomain1Hash,
+        publicResolverContract.address,
+        fromUser
       )
 
-      expect(logs.length).to.be.equal(1)
+      const resolver = await ensRegistryContract.resolver(subdomain1Hash)
+      expect(resolver).to.be.equal(publicResolverContract.address)
 
-      const newOwnerLog = logs[0]
-      expect(newOwnerLog.event).to.be.equal('MaxGasPriceChanged')
-      expect(newOwnerLog.args._oldMaxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-      expect(newOwnerLog.args._newMaxGasPrice).to.eq.BN(newMaxGasPrice)
-
-      maxGasPrice = await dclControllerContract.maxGasPrice()
-      expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-    })
-
-    it('should update the max gas price to 1 gwei', async function() {
-      const newMaxGasPrice = 1000000000
-      await dclControllerContract.updateMaxGasPrice(
-        newMaxGasPrice,
-        fromDeployer
+      await publicResolverContract.methods['setAddr(bytes32,address)'](
+        subdomain1Hash,
+        anotherUser,
+        fromUser
       )
 
-      const maxGasPrice = await dclControllerContract.maxGasPrice()
-      expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+      const target = await publicResolverContract.addr(subdomain1Hash)
+      expect(target).to.be.equal(anotherUser)
     })
 
-    it('should update the max gas price to 30 gwei', async function() {
-      const newMaxGasPrice = 30000000000
-      await dclControllerContract.updateMaxGasPrice(
-        newMaxGasPrice,
-        fromDeployer
+    it('should change the resolver and target address if it is still the owner in the registry', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await dclRegistrarContract.transferFrom(
+        user,
+        anotherUser,
+        subdomain1LabelHash,
+        fromUser
       )
 
-      const maxGasPrice = await dclControllerContract.maxGasPrice()
-      expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(user)
+
+      await ensRegistryContract.setResolver(
+        subdomain1Hash,
+        publicResolverContract.address,
+        fromUser
+      )
+
+      const resolver = await ensRegistryContract.resolver(subdomain1Hash)
+      expect(resolver).to.be.equal(publicResolverContract.address)
+
+      await publicResolverContract.methods['setAddr(bytes32,address)'](
+        subdomain1Hash,
+        anotherUser,
+        fromUser
+      )
+
+      const target = await publicResolverContract.addr(subdomain1Hash)
+      expect(target).to.be.equal(anotherUser)
     })
 
-    it('reverts when updating the max gas price by an unauthorized user', async function() {
-      const newMaxGasPrice = 10000000000
+    it('should change the resolver and target address if a reclaim is made', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await dclRegistrarContract.transferFrom(
+        user,
+        anotherUser,
+        subdomain1LabelHash,
+        fromUser
+      )
+
+      await dclRegistrarContract.reclaim(
+        subdomain1LabelHash,
+        anotherUser,
+        fromAnotherUser
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(anotherUser)
+
+      await ensRegistryContract.setResolver(
+        subdomain1Hash,
+        publicResolverContract.address,
+        fromAnotherUser
+      )
+
+      const resolver = await ensRegistryContract.resolver(subdomain1Hash)
+      expect(resolver).to.be.equal(publicResolverContract.address)
+
+      await publicResolverContract.methods['setAddr(bytes32,address)'](
+        subdomain1Hash,
+        user,
+        fromAnotherUser
+      )
+
+      let target = await publicResolverContract.addr(subdomain1Hash)
+      expect(target).to.be.equal(user)
+
+      await publicResolverContract.methods['setAddr(bytes32,address)'](
+        subdomain1Hash,
+        anotherUser,
+        fromAnotherUser
+      )
+
+      target = await publicResolverContract.addr(subdomain1Hash)
+      expect(target).to.be.equal(anotherUser)
+    })
+
+    it('should change the owner of the node', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await ensRegistryContract.setOwner(subdomain1Hash, anotherUser, fromUser)
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(anotherUser)
+    })
+
+    it('should recover the owner after reclaim', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await ensRegistryContract.setOwner(subdomain1Hash, anotherUser, fromUser)
+
+      let subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(anotherUser)
+
+      await dclRegistrarContract.reclaim(subdomain1LabelHash, user, fromUser)
+
+      subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(user)
+    })
+
+    it('should allow the creation of sub nodes from a subdomain', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await ensRegistryContract.setSubnodeOwner(
+        subdomain1Hash,
+        subdomain2LabelHash,
+        anotherUser,
+        fromUser
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(
+        web3.utils.sha3(
+          web3.eth.abi.encodeParameters(
+            ['bytes32', 'bytes32'],
+            [subdomain1Hash, subdomain2LabelHash]
+          )
+        )
+      )
+      expect(subdomainOwner).to.be.equal(anotherUser)
+    })
+
+    it('reverts when trying to change the resolver by an unauthorized account', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
       await assertRevert(
-        dclControllerContract.updateMaxGasPrice(newMaxGasPrice, fromHacker),
-        'Ownable: caller is not the owner'
+        ensRegistryContract.setResolver(
+          subdomain1Hash,
+          publicResolverContract.address,
+          fromHacker
+        )
       )
     })
 
-    it('reverts when updating the max gas price with lower than 1 gwei', async function() {
-      await assertRevert(
-        dclControllerContract.updateMaxGasPrice(0, fromDeployer),
-        'Max gas price should be greater than or equal to 1 gwei'
+    it('reverts when trying to change the target address by an unauthorized account', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await dclRegistrarContract.transferFrom(
+        user,
+        anotherUser,
+        subdomain1LabelHash,
+        fromUser
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(user)
+
+      await ensRegistryContract.setResolver(
+        subdomain1Hash,
+        publicResolverContract.address,
+        fromUser
+      )
+
+      const resolver = await ensRegistryContract.resolver(subdomain1Hash)
+      expect(resolver).to.be.equal(publicResolverContract.address)
+
+      await dclRegistrarContract.reclaim(
+        subdomain1LabelHash,
+        anotherUser,
+        fromAnotherUser
       )
 
       await assertRevert(
-        dclControllerContract.updateMaxGasPrice(999999999, fromDeployer),
-        'Max gas price should be greater than or equal to 1 gwei'
+        publicResolverContract.methods['setAddr(bytes32,address)'](
+          subdomain1Hash,
+          user,
+          fromUser
+        )
       )
     })
 
-    it('reverts when updating the max gas price with the same value', async function() {
+    it('reverts when trying to change the target address by an unauthorized account after set', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await dclRegistrarContract.transferFrom(
+        user,
+        anotherUser,
+        subdomain1LabelHash,
+        fromUser
+      )
+
+      await dclRegistrarContract.reclaim(
+        subdomain1LabelHash,
+        anotherUser,
+        fromAnotherUser
+      )
+
+      const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+      expect(subdomainOwner).to.be.equal(anotherUser)
+
+      await ensRegistryContract.setResolver(
+        subdomain1Hash,
+        publicResolverContract.address,
+        fromAnotherUser
+      )
+
+      const resolver = await ensRegistryContract.resolver(subdomain1Hash)
+      expect(resolver).to.be.equal(publicResolverContract.address)
+
+      await publicResolverContract.methods['setAddr(bytes32,address)'](
+        subdomain1Hash,
+        user,
+        fromAnotherUser
+      )
+
+      const target = await publicResolverContract.addr(subdomain1Hash)
+      expect(target).to.be.equal(user)
+
       await assertRevert(
-        dclControllerContract.updateMaxGasPrice(MAX_GAS_PRICE, fromDeployer),
-        'Max gas price should be different'
+        publicResolverContract.methods['setAddr(bytes32,address)'](
+          subdomain1Hash,
+          anotherUser,
+          fromHacker
+        )
+      )
+    })
+
+    it('reverts when trying to set the owner for subdomain by an unauthorized account', async function() {
+      await dclControllerContract.register(subdomain1, user, fromUser)
+
+      await assertRevert(
+        ensRegistryContract.setOwner(subdomain1Hash, anotherUser, fromHacker)
+      )
+    })
+
+    it('reverts when trying to set a subnode owner for a domain by an unauthorized account', async function() {
+      await assertRevert(
+        ensRegistryContract.setSubnodeOwner(
+          dclDomainHash,
+          subdomain2LabelHash,
+          anotherUser,
+          fromUser
+        )
       )
     })
   })

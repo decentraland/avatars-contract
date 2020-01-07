@@ -75,6 +75,10 @@ contract DCLController is Ownable {
         emit NameBought(msg.sender,  _beneficiary, PRICE, _name);
     }
 
+    /**
+     * @dev Update max gas price
+     * @param _maxGasPrice - new max gas price to be used
+     */
     function updateMaxGasPrice(uint256 _maxGasPrice) external onlyOwner {
         require(_maxGasPrice != maxGasPrice, "Max gas price should be different");
         require(
@@ -89,8 +93,8 @@ contract DCLController is Ownable {
 
     /**
      * @dev Validate if a user has balance and the contract has enough allowance
-     * to use user's accepted token on his belhalf.
-     * @param _user - address of the user.
+     * to use user's accepted token on his belhalf
+     * @param _user - address of the user
      */
     function _requireBalance(address _user) internal view {
         require(
