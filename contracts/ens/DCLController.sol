@@ -1,26 +1,46 @@
 
 pragma solidity ^0.5.15;
 
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
+
 import "../interfaces/IENSRegistry.sol";
 import "../interfaces/IDCLRegistrar.sol";
 import "../interfaces/IERC20Token.sol";
 
-contract DCLController {
+contract DCLController is Ownable {
+    using Address for address;
+
+    // Price of each name
+    uint256 constant public PRICE = 100 ether;
+
+    // Accepted ERC20 token
     IERC20Token public acceptedToken;
+    // ENS Registry
     IENSRegistry public registry;
+    // DCL Registrar
     IDCLRegistrar public registrar;
 
-    uint256 public price = 100000000000000000000; // 100 in wei
+    // Price of each name
+    uint256 public maxGasPrice = 20000000000; // 20 gwei
 
+    // Emitted when a name is bought
     event NameBought(address indexed _caller, address indexed _beneficiary, uint256 _price, string _name);
 
+    // Emitted when the max gas price is changed
+    event MaxGasPriceChanged(uint256 indexed _oldMaxGasPrice, uint256 indexed _newMaxGasPrice);
+
     /**
-	 * @dev Constructor of the contract.
-     * @param _acceptedToken - address of the accepted token.
-	 * @param _registry - address of the ENS registry contract.
-     * @param _registrar - address of the DCL registrar contract.
+	 * @dev Constructor of the contract
+     * @param _acceptedToken - address of the accepted token
+	 * @param _registry - address of the ENS registry contract
+     * @param _registrar - address of the DCL registrar contract
 	 */
     constructor(IERC20Token _acceptedToken,  IENSRegistry _registry, IDCLRegistrar _registrar) public {
+        require(address(_acceptedToken).isContract(), "Accepted token should be a contract");
+        require(address(_registry).isContract(), "Registry should be a contract");
+        require(address(_registrar).isContract(), "Registrar should be a contract");
+
         // Accepted token
         acceptedToken = _acceptedToken;
         // ENS registry
@@ -29,20 +49,42 @@ contract DCLController {
         registrar = _registrar;
     }
 
+    /**
+	 * @dev Register a name
+     * @param _name - name to be registered
+	 * @param _beneficiary - owner of the name
+	 */
     function register(string memory _name, address _beneficiary) public {
+        // Check gas price
+        require(tx.gasprice <= maxGasPrice, "Maximum gas price allowed exceeded");
         // Check for valid beneficiary
         require(_beneficiary != address(0), "Invalid beneficiary");
+
+        // Check if the name is valid
         _requireNameValid(_name);
         // Check if the sender has at least `price` and the contract has allowance to use on its behalf
         _requireBalance(msg.sender);
+
         // Register the name
         registrar.register(_name, _beneficiary);
         // Debit `price` from sender
-        acceptedToken.transferFrom(msg.sender, address(this), price);
+        acceptedToken.transferFrom(msg.sender, address(this), PRICE);
         // Burn it
-        acceptedToken.burn(price);
+        acceptedToken.burn(PRICE);
         // Log
-        emit NameBought(msg.sender,  _beneficiary, price, _name);
+        emit NameBought(msg.sender,  _beneficiary, PRICE, _name);
+    }
+
+    function updateMaxGasPrice(uint256 _maxGasPrice) external onlyOwner {
+        require(_maxGasPrice != maxGasPrice, "Max gas price should be different");
+        require(
+            _maxGasPrice >= 1000000000,
+            "Max gas price should be greater than or equal to 1 gwei"
+        );
+
+        emit MaxGasPriceChanged(maxGasPrice, _maxGasPrice);
+
+        maxGasPrice = _maxGasPrice;
     }
 
     /**
@@ -52,24 +94,25 @@ contract DCLController {
      */
     function _requireBalance(address _user) internal view {
         require(
-            acceptedToken.balanceOf(_user) >= price,
+            acceptedToken.balanceOf(_user) >= PRICE,
             "Insufficient funds"
         );
         require(
-            acceptedToken.allowance(_user, address(this)) >= price,
+            acceptedToken.allowance(_user, address(this)) >= PRICE,
             "The contract is not authorized to use the accepted token on sender behalf"
         );
     }
 
     /**
-    * @dev Validate a bane
+    * @dev Validate a nane
+    * @notice that only a-z is allowed
     * @param _name - string for the name
     */
     function _requireNameValid(string memory _name) internal pure {
         bytes memory tempName = bytes(_name);
         require(tempName.length <= 15, "Name should be less than or equal 15 characters");
         for(uint256 i = 0; i < tempName.length; i++) {
-            require(tempName[i] > 0x20, "Invalid Character");
+            require(tempName[i] >= 0x60 && tempName[i] <= 0x7A, "Invalid Character");
         }
     }
 

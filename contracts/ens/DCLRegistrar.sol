@@ -99,9 +99,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
     // @TODO: wip method
     function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external onlyOwner isMigrating {
         for (uint256 i = 0; i < _names.length; i++) {
+            string memory name = _bytes32ToString(_names[i]);
             _register(
-                _bytes32ToString(_names[i]),
-                keccak256(abi.encodePacked(_names[i])),
+                name,
+                keccak256(abi.encodePacked(name)),
                 _beneficiaries[i]
             );
         }
@@ -272,6 +273,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 
         string memory out = new string(charCount);
 
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             mstore(add(0x20, out), _x)
         }
