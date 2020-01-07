@@ -1,9 +1,12 @@
 #! /bin/bash
 
 AVATARS=AvatarNameRegistry.sol
-ENSSUBDOMAIN=SubdomainENSRegistry.sol
+DCLREGISTRAR=DCLRegistrar.sol
+DCLCONTROLLER=DCLController.sol
+
 
 OUTPUT=full
 
 npx truffle-flattener contracts/oldNameRegistry/$AVATARS > $OUTPUT/$AVATARS &&
-npx truffle-flattener contracts/ens/$ENSSUBDOMAIN > $OUTPUT/$ENSSUBDOMAIN
+npx truffle-flattener contracts/ens/$DCLREGISTRAR > $OUTPUT/$DCLREGISTRAR &&
+npx truffle-flattener contracts/ens/$DCLCONTROLLER > $OUTPUT/$DCLCONTROLLER
