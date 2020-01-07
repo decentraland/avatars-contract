@@ -42,6 +42,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         bytes32 indexed _labelHash,
         string _subdomain
     );
+    event Reclaimed(address indexed _caller, address indexed _owner, uint256 indexed  _tokenId);
+    event DomainReclaimed(uint256 indexed _tokenId);
     event DomainTransferred(address indexed _newOwner, uint256 indexed _tokenId);
 
     event RegistryUpdated(IENSRegistry indexed _previousRegistry, IENSRegistry indexed _newRegistry);
@@ -76,13 +78,16 @@ contract DCLRegistrar is ERC721Full, Ownable {
         string memory _domain
     ) public ERC721Full("DCL Registrar", "DCLENS") {
         // ENS registry
-        registry = _registry;
+        updateRegistry(_registry);
         // ENS base registrar
-        base = _base;
+        updateBase(_base);
 
         // Top domain string
+        require(bytes(_topdomain).length > 0, "Top domain can not be empty");
         topdomain = _topdomain;
+
         // Domain string
+        require(bytes(_domain).length > 0, "Domain can not be empty");
         domain = _domain;
 
         // Generate namehash for the top domain
@@ -147,6 +152,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         );
 
         registry.setSubnodeOwner(domainNameHash, bytes32(_tokenId), _owner);
+
+        emit Reclaimed(msg.sender, _owner, _tokenId);
     }
 
     /**
@@ -189,6 +196,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
      */
     function reclaimDomain(uint256 _tokenId) public onlyOwner {
         base.reclaim(_tokenId, address(this));
+
+        emit DomainReclaimed(_tokenId);
     }
 
     /**
@@ -219,7 +228,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @dev Allows to update to new ENS registry.
 	 * @param _registry The address of new ENS registry to use.
 	 */
-    function updateRegistry(IENSRegistry _registry) external onlyOwner {
+    function updateRegistry(IENSRegistry _registry) public onlyOwner {
         require(registry != _registry, "New registry should be different from old");
         require(address(_registry).isContract(), "New registry should be a contract");
 
@@ -232,7 +241,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @dev Allows to update to new ENS base registrar.
 	 * @param _base The address of new ENS base registrar to use.
 	 */
-    function updateBase(IBaseRegistrar _base) external onlyOwner {
+    function updateBase(IBaseRegistrar _base) public onlyOwner {
         require(base != _base, "New base should be different from old");
         require(address(_base).isContract(), "New base should be a contract");
 

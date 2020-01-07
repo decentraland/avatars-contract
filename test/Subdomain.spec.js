@@ -206,6 +206,58 @@ describe('DCL Names V2', function() {
         )
         expect(userControllerOfDCL).to.be.equal(dclRegistrarContract.address)
       })
+
+      it('reverts if registry is not a contract', async function() {
+        assertRevert(
+          DCLRegistrar.new(
+            user,
+            baseRegistrarContract.address,
+            TOP_DOMAIN,
+            DOMAIN,
+            creationParams
+          ),
+          'New registry should be a contract'
+        )
+      })
+
+      it('reverts if base is not a contract', async function() {
+        assertRevert(
+          DCLRegistrar.new(
+            ensRegistryContract.address,
+            user,
+            TOP_DOMAIN,
+            DOMAIN,
+            creationParams
+          ),
+          'New base should be a contract'
+        )
+      })
+
+      it('reverts if top domain is empty', async function() {
+        await assertRevert(
+          DCLRegistrar.new(
+            ensRegistryContract.address,
+            baseRegistrarContract.address,
+            '',
+            DOMAIN,
+            creationParams
+          ),
+          'Top domain can not be empty'
+        )
+      })
+
+      it('reverts if domain is empty', async function() {
+        await assertRevert(
+          DCLRegistrar.new(
+            ensRegistryContract.address,
+            baseRegistrarContract.address,
+            TOP_DOMAIN,
+            '',
+            creationParams
+          ),
+          'Domain can not be empty'
+        )
+      })
     })
 
     describe('Register', function() {
@@ -359,7 +411,25 @@ describe('DCL Names V2', function() {
           fromUserController
         )
 
-        await dclRegistrarContract.reclaim(subdomain1LabelHash, user, fromUser)
+        const { logs } = await dclRegistrarContract.reclaim(
+          subdomain1LabelHash,
+          user,
+          fromUser
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('NewOwner')
+        expect(logs[0].args.node).to.be.equal(dclDomainHash)
+        expect(logs[0].args.label).to.be.equal(subdomain1LabelHash)
+        expect(logs[0].args.owner).to.be.equal(user)
+
+        expect(logs[1].event).to.be.equal('Reclaimed')
+        expect(logs[1].args._caller).to.be.equal(user)
+        expect(logs[1].args._owner).to.be.equal(user)
+        expect(logs[1].args._tokenId).to.eq.BN(
+          web3.utils.toBN(subdomain1LabelHash)
+        )
 
         const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
         expect(subdomainOwner).to.be.equal(user)
@@ -445,10 +515,25 @@ describe('DCL Names V2', function() {
           user,
           fromUserController
         )
-        await dclRegistrarContract.reclaim(
+
+        const { logs } = await dclRegistrarContract.reclaim(
           subdomain1LabelHash,
           anotherUser,
           fromUser
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('NewOwner')
+        expect(logs[0].args.node).to.be.equal(dclDomainHash)
+        expect(logs[0].args.label).to.be.equal(subdomain1LabelHash)
+        expect(logs[0].args.owner).to.be.equal(anotherUser)
+
+        expect(logs[1].event).to.be.equal('Reclaimed')
+        expect(logs[1].args._caller).to.be.equal(user)
+        expect(logs[1].args._owner).to.be.equal(anotherUser)
+        expect(logs[1].args._tokenId).to.eq.BN(
+          web3.utils.toBN(subdomain1LabelHash)
         )
 
         const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
@@ -555,7 +640,20 @@ describe('DCL Names V2', function() {
         subdomainOwner = await ensRegistryContract.owner(hash)
         expect(subdomainOwner).to.be.equal(deployer)
 
-        await dclRegistrarContract.reclaimDomain(labelHash, fromDeployer)
+        const { logs } = await dclRegistrarContract.reclaimDomain(
+          labelHash,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('NewOwner')
+        expect(logs[0].args.node).to.be.equal(ethTopdomainHash)
+        expect(logs[0].args.label).to.be.equal(labelHash)
+        expect(logs[0].args.owner).to.be.equal(dclRegistrarContract.address)
+
+        expect(logs[1].event).to.be.equal('DomainReclaimed')
+        expect(logs[1].args._tokenId).to.eq.BN(web3.utils.toBN(labelHash))
 
         subdomainOwner = await ensRegistryContract.owner(hash)
         expect(subdomainOwner).to.be.equal(dclRegistrarContract.address)
