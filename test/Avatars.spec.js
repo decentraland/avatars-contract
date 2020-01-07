@@ -1,5 +1,4 @@
 import { Mana, ADDRESS_INDEXES } from 'decentraland-contract-plugins'
-
 import assertRevert from './helpers/assertRevert'
 
 const BN = web3.utils.BN
@@ -7,7 +6,7 @@ const expect = require('chai').use(require('bn-chai')(BN)).expect
 
 const Avatars = artifacts.require('AvatarNameRegistry')
 
-describe('Avatars', function() {
+describe.skip('DCL Names v1', function() {
   this.timeout(100000)
 
   // globals
@@ -65,7 +64,9 @@ describe('Avatars', function() {
     }
 
     const mana = new Mana({ accounts, artifacts: global })
+
     await mana.deploy({ txParams: creationParams })
+
     manaContract = mana.getContract()
 
     avatarsContract = await Avatars.new(creationParams)

@@ -1,4 +1,21 @@
 require('babel-register')
 require('babel-polyfill')
 
-require('decentraland-contract-plugins/dist/mana/tasks/load-mana')
+const { loadPluginFile } = require('@nomiclabs/buidler/plugins-testing')
+
+loadPluginFile(
+  require.resolve('decentraland-contract-plugins/dist/mana/tasks/load-mana')
+)
+
+usePlugin('@nomiclabs/buidler-truffle5')
+
+module.exports = {
+  defaultNetwork: 'buidlerevm',
+  solc: {
+    version: '0.5.15',
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
+  }
+}

@@ -142,7 +142,7 @@ contract Ownable is Initializable {
     uint256[50] private ______gap;
 }
 
-// File: contracts/AvatarNameStorage.sol
+// File: contracts/oldNameRegistry/AvatarNameStorage.sol
 
 pragma solidity ^0.5.0;
 
@@ -181,7 +181,7 @@ contract AvatarNameStorage {
     event Allow(address indexed _caller, address indexed _account, bool _allowed);
 }
 
-// File: contracts/AvatarNameRegistry.sol
+// File: contracts/oldNameRegistry/AvatarNameRegistry.sol
 
 pragma solidity ^0.5.0;
 
