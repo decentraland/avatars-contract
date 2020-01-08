@@ -287,8 +287,6 @@ contract DCLController is Ownable {
 
     // Accepted ERC20 token
     IERC20Token public acceptedToken;
-    // ENS Registry
-    IENSRegistry public registry;
     // DCL Registrar
     IDCLRegistrar public registrar;
 
@@ -304,18 +302,14 @@ contract DCLController is Ownable {
     /**
 	 * @dev Constructor of the contract
      * @param _acceptedToken - address of the accepted token
-	 * @param _registry - address of the ENS registry contract
      * @param _registrar - address of the DCL registrar contract
 	 */
-    constructor(IERC20Token _acceptedToken,  IENSRegistry _registry, IDCLRegistrar _registrar) public {
+    constructor(IERC20Token _acceptedToken, IDCLRegistrar _registrar) public {
         require(address(_acceptedToken).isContract(), "Accepted token should be a contract");
-        require(address(_registry).isContract(), "Registry should be a contract");
         require(address(_registrar).isContract(), "Registrar should be a contract");
 
         // Accepted token
         acceptedToken = _acceptedToken;
-        // ENS registry
-        registry = _registry;
         // DCL registrar
         registrar = _registrar;
     }
@@ -343,7 +337,7 @@ contract DCLController is Ownable {
         // Burn it
         acceptedToken.burn(PRICE);
         // Log
-        emit NameBought(msg.sender,  _beneficiary, PRICE, _name);
+        emit NameBought(msg.sender, _beneficiary, PRICE, _name);
     }
 
     /**
@@ -386,7 +380,7 @@ contract DCLController is Ownable {
     function _requireNameValid(string memory _name) internal pure {
         bytes memory tempName = bytes(_name);
         require(
-            tempName.length > 0 && tempName.length <= 15,
+            tempName.length >= 3 && tempName.length <= 15,
             "Name should be greather than or equal to 3 and less than or equal to 15"
         );
         for(uint256 i = 0; i < tempName.length; i++) {
