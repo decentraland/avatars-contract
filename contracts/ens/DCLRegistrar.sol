@@ -18,7 +18,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
     // The ENS registry
     IENSRegistry public registry;
     // The ENS base registrar
-    IBaseRegistrar public  base;
+    IBaseRegistrar public base;
 
     // A map of addresses that are authorised to register and renew names.
     mapping(address => bool) public controllers;
@@ -78,17 +78,25 @@ contract DCLRegistrar is ERC721Full, Ownable {
     /**
 	 * @dev Check if the migration is pending
      */
-    modifier isMigrating() {
-        require(migrated == false, "The migration has finished");
+    modifier isNotMigrated() {
+        require(!migrated, "The migration has finished");
+        _;
+    }
+
+    /**
+	 * @dev Check if the migration is completed
+     */
+    modifier isMigrated() {
+        require(migrated, "The migration has not finished");
         _;
     }
 
      /**
-	 * @dev Constructor of the contrac
-	 * @param _registry - address of the ENS registry contrac
-     * @param _base - address of the ENS base registrar contrac
-     * @param _topdomain - top domain (e.g. "eth"
-     * @param _domain - domain (e.g. "dcl"
+	 * @dev Constructor of the contract
+	 * @param _registry - address of the ENS registry contract
+     * @param _base - address of the ENS base registrar contract
+     * @param _topdomain - top domain (e.g. "eth")
+     * @param _domain - domain (e.g. "dcl")
 	 */
     constructor(
         IENSRegistry _registry,
@@ -120,7 +128,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param _names - array of names
      * @param _beneficiaries - array of beneficiaries
 	 */
-    function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external onlyOwner isMigrating {
+    function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external onlyOwner isNotMigrated {
         for (uint256 i = 0; i < _names.length; i++) {
             string memory name = _bytes32ToString(_names[i]);
             _register(
@@ -136,7 +144,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param _subdomain - subdomain  (e.g. "nacho")
 	 * @param _beneficiary - address that will become owner of this new subdomain
 	 */
-    function register(string calldata _subdomain, address _beneficiary) external onlyController {
+    function register(string calldata _subdomain, address _beneficiary) external onlyController isMigrated {
         // Make sure this contract owns the domain
         require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
         // Create labelhash for the subdomain
@@ -248,7 +256,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function addController(address controller) external onlyOwner {
-        require(controllers[controller] == false, "The controller was already added");
+        require(!controllers[controller], "The controller was already added");
         controllers[controller] = true;
         emit ControllerAdded(controller);
     }
@@ -292,7 +300,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
     /**
 	 * @dev Set the migration as finished
 	 */
-    function migrationFinished() external onlyOwner isMigrating {
+    function migrationFinished() external onlyOwner isNotMigrated {
         migrated = true;
         emit MigrationFinished();
     }
