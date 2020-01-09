@@ -45,7 +45,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address indexed _caller,
         address indexed _beneficiary,
         bytes32 indexed _labelHash,
-        string _subdomain
+        string _subdomain,
+        uint256 _createdDate
     );
     // Emitted when a user reclaim a subdomain to the ENS Registry
     event Reclaimed(address indexed _caller, address indexed _owner, uint256 indexed  _tokenId);
@@ -127,14 +128,20 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @dev Migrate names from v1
 	 * @param _names - array of names
      * @param _beneficiaries - array of beneficiaries
+     * @param _createdDates - array of created dates
 	 */
-    function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external onlyOwner isNotMigrated {
+    function migrateNames(
+        bytes32[] calldata _names,
+        address[] calldata _beneficiaries,
+        uint256[] calldata _createdDates
+    ) external onlyOwner isNotMigrated {
         for (uint256 i = 0; i < _names.length; i++) {
             string memory name = _bytes32ToString(_names[i]);
             _register(
                 name,
                 keccak256(abi.encodePacked(name)),
-                _beneficiaries[i]
+                _beneficiaries[i],
+                _createdDates[i]
             );
         }
     }
@@ -144,7 +151,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param _subdomain - subdomain  (e.g. "nacho")
 	 * @param _beneficiary - address that will become owner of this new subdomain
 	 */
-    function register(string calldata _subdomain, address _beneficiary) external onlyController isMigrated {
+    function register(
+        string calldata _subdomain,
+        address _beneficiary
+    ) external onlyController isMigrated {
         // Make sure this contract owns the domain
         require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
         // Create labelhash for the subdomain
@@ -153,8 +163,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
         require(available(subdomainNameHash), "Subdomain already owned");
-
-        _register(_subdomain, subdomainLabelHash, _beneficiary);
+        // solium-disable-next-line security/no-block-members
+        _register(_subdomain, subdomainLabelHash, _beneficiary, now);
     }
 
     /**
@@ -163,15 +173,20 @@ contract DCLRegistrar is ERC721Full, Ownable {
      * @param subdomainLabelHash - hash of the subdomain
 	 * @param _beneficiary - address that will become owner of this new subdomain
 	 */
-    function _register(string memory _subdomain, bytes32 subdomainLabelHash, address _beneficiary) internal {
-        // Create new subdomain, temporarily this smartcontract is the owner
+    function _register(
+        string memory _subdomain,
+        bytes32 subdomainLabelHash,
+        address _beneficiary,
+        uint256 _createdDate
+    ) internal {
+        // Create new subdomain and assign the _beneficiary as the owner
         registry.setSubnodeOwner(domainNameHash, subdomainLabelHash, _beneficiary);
         // Mint an ERC721 token with the sud domain label hash as its id
         _mint(_beneficiary, uint256(subdomainLabelHash));
         // Map the ERC721 token id with the subdomain for reversion.
         subdomains[subdomainLabelHash] = _subdomain;
         // Emit registered name event
-        emit NameRegistered(msg.sender, _beneficiary, subdomainLabelHash, _subdomain);
+        emit NameRegistered(msg.sender, _beneficiary, subdomainLabelHash, _subdomain, _createdDate);
     }
 
     /**
@@ -231,8 +246,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
 
     /**
 	 * @dev Re-claim the ownership of the domain (e.g. "dcl")
-     * @notice After a domain is transferred by the ENS base registrar to this contract, the owner in the ENS registry contract
-     * is still the old owner. Therefore, the owner should call `reclaimDomain` to update the owner of the domain
+     * @notice After a domain is transferred by the ENS base
+     * registrar to this contract, the owner in the ENS registry contract
+     * is still the old owner. Therefore, the owner should call `reclaimDomain`
+     * to update the owner of the domain
 	 * @param _tokenId - erc721 token id which represents the node (domain)
      */
     function reclaimDomain(uint256 _tokenId) public onlyOwner {
