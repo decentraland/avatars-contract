@@ -3,7 +3,6 @@ pragma solidity ^0.5.15;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interfaces/IENSRegistry.sol";

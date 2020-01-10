@@ -1360,7 +1360,6 @@ pragma solidity ^0.5.15;
 
 
 
-
 contract DCLRegistrar is ERC721Full, Ownable {
     using Address for address;
     bytes4 public constant ERC721_RECEIVED = 0x150b7a02;
