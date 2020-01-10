@@ -1,5 +1,5 @@
 
-// File: openzeppelin-solidity/contracts/GSN/Context.sol
+// File: @openzeppelin/contracts/GSN/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: openzeppelin-solidity/contracts/ownership/Ownable.sol
+// File: @openzeppelin/contracts/ownership/Ownable.sol
 
 pragma solidity ^0.5.0;
 
@@ -107,7 +107,7 @@ contract Ownable is Context {
     }
 }
 
-// File: openzeppelin-solidity/contracts/introspection/IERC165.sol
+// File: @openzeppelin/contracts/introspection/IERC165.sol
 
 pragma solidity ^0.5.0;
 
@@ -132,7 +132,7 @@ interface IERC165 {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/IERC721.sol
+// File: @openzeppelin/contracts/token/ERC721/IERC721.sol
 
 pragma solidity ^0.5.0;
 
@@ -187,7 +187,7 @@ contract IERC721 is IERC165 {
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public;
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/IERC721Receiver.sol
+// File: @openzeppelin/contracts/token/ERC721/IERC721Receiver.sol
 
 pragma solidity ^0.5.0;
 
@@ -215,7 +215,7 @@ contract IERC721Receiver {
     public returns (bytes4);
 }
 
-// File: openzeppelin-solidity/contracts/math/SafeMath.sol
+// File: @openzeppelin/contracts/math/SafeMath.sol
 
 pragma solidity ^0.5.0;
 
@@ -374,7 +374,7 @@ library SafeMath {
     }
 }
 
-// File: openzeppelin-solidity/contracts/utils/Address.sol
+// File: @openzeppelin/contracts/utils/Address.sol
 
 pragma solidity ^0.5.5;
 
@@ -445,7 +445,7 @@ library Address {
     }
 }
 
-// File: openzeppelin-solidity/contracts/drafts/Counters.sol
+// File: @openzeppelin/contracts/drafts/Counters.sol
 
 pragma solidity ^0.5.0;
 
@@ -484,7 +484,7 @@ library Counters {
     }
 }
 
-// File: openzeppelin-solidity/contracts/introspection/ERC165.sol
+// File: @openzeppelin/contracts/introspection/ERC165.sol
 
 pragma solidity ^0.5.0;
 
@@ -538,7 +538,7 @@ contract ERC165 is IERC165 {
     }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/ERC721.sol
+// File: @openzeppelin/contracts/token/ERC721/ERC721.sol
 
 pragma solidity ^0.5.0;
 
@@ -887,7 +887,7 @@ contract ERC721 is Context, ERC165, IERC721 {
     }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol
+// File: @openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol
 
 pragma solidity ^0.5.0;
 
@@ -903,7 +903,7 @@ contract IERC721Enumerable is IERC721 {
     function tokenByIndex(uint256 index) public view returns (uint256);
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/ERC721Enumerable.sol
+// File: @openzeppelin/contracts/token/ERC721/ERC721Enumerable.sol
 
 pragma solidity ^0.5.0;
 
@@ -1105,7 +1105,7 @@ contract ERC721Enumerable is Context, ERC165, ERC721, IERC721Enumerable {
     }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol
+// File: @openzeppelin/contracts/token/ERC721/IERC721Metadata.sol
 
 pragma solidity ^0.5.0;
 
@@ -1120,7 +1120,7 @@ contract IERC721Metadata is IERC721 {
     function tokenURI(uint256 tokenId) external view returns (string memory);
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol
+// File: @openzeppelin/contracts/token/ERC721/ERC721Metadata.sol
 
 pragma solidity ^0.5.0;
 
@@ -1212,7 +1212,7 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
     }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol
+// File: @openzeppelin/contracts/token/ERC721/ERC721Full.sol
 
 pragma solidity ^0.5.0;
 
@@ -1360,6 +1360,7 @@ pragma solidity ^0.5.15;
 
 
 
+
 contract DCLRegistrar is ERC721Full, Ownable {
     using Address for address;
     bytes4 public constant ERC721_RECEIVED = 0x150b7a02;
@@ -1382,6 +1383,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
     bytes32 public topdomainNameHash;
     // Domain hash
     bytes32 public domainNameHash;
+    // Base URI
+    string public baseURI;
 
     // Whether the migration of v1 names has finished or not
     bool public migrated;
@@ -1394,7 +1397,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address indexed _caller,
         address indexed _beneficiary,
         bytes32 indexed _labelHash,
-        string _subdomain
+        string _subdomain,
+        uint256 _createdDate
     );
     // Emitted when a user reclaim a subdomain to the ENS Registry
     event Reclaimed(address indexed _caller, address indexed _owner, uint256 indexed  _tokenId);
@@ -1415,6 +1419,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
 
     // Emitted when the migration was finished
     event MigrationFinished();
+
+    // Emitted when base URI is was changed
+    event BaseURI(string _oldBaseURI, string _newBaseURI);
+
 
     /**
 	 * @dev Check if the sender is an authorized controller
@@ -1446,12 +1454,14 @@ contract DCLRegistrar is ERC721Full, Ownable {
      * @param _base - address of the ENS base registrar contract
      * @param _topdomain - top domain (e.g. "eth")
      * @param _domain - domain (e.g. "dcl")
+     * @param _baseURI - base URI for token URIs
 	 */
     constructor(
         IENSRegistry _registry,
         IBaseRegistrar _base,
         string memory _topdomain,
-        string memory _domain
+        string memory _domain,
+        string memory _baseURI
     ) public ERC721Full("DCL Registrar", "DCLENS") {
         // ENS registry
         updateRegistry(_registry);
@@ -1470,20 +1480,29 @@ contract DCLRegistrar is ERC721Full, Ownable {
         topdomainNameHash = keccak256(abi.encodePacked(emptyNamehash, keccak256(abi.encodePacked(topdomain))));
         // Generate namehash for the domain
         domainNameHash = keccak256(abi.encodePacked(topdomainNameHash, keccak256(abi.encodePacked(domain))));
+
+        // Set base URI
+        updateBaseURI(_baseURI);
     }
 
     /**
 	 * @dev Migrate names from v1
 	 * @param _names - array of names
      * @param _beneficiaries - array of beneficiaries
+     * @param _createdDates - array of created dates
 	 */
-    function migrateNames(bytes32[] calldata _names, address[] calldata _beneficiaries) external onlyOwner isNotMigrated {
+    function migrateNames(
+        bytes32[] calldata _names,
+        address[] calldata _beneficiaries,
+        uint256[] calldata _createdDates
+    ) external onlyOwner isNotMigrated {
         for (uint256 i = 0; i < _names.length; i++) {
             string memory name = _bytes32ToString(_names[i]);
             _register(
                 name,
                 keccak256(abi.encodePacked(name)),
-                _beneficiaries[i]
+                _beneficiaries[i],
+                _createdDates[i]
             );
         }
     }
@@ -1493,7 +1512,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param _subdomain - subdomain  (e.g. "nacho")
 	 * @param _beneficiary - address that will become owner of this new subdomain
 	 */
-    function register(string calldata _subdomain, address _beneficiary) external onlyController isMigrated {
+    function register(
+        string calldata _subdomain,
+        address _beneficiary
+    ) external onlyController isMigrated {
         // Make sure this contract owns the domain
         require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
         // Create labelhash for the subdomain
@@ -1502,8 +1524,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
         require(available(subdomainNameHash), "Subdomain already owned");
-
-        _register(_subdomain, subdomainLabelHash, _beneficiary);
+        // solium-disable-next-line security/no-block-members
+        _register(_subdomain, subdomainLabelHash, _beneficiary, now);
     }
 
     /**
@@ -1512,15 +1534,20 @@ contract DCLRegistrar is ERC721Full, Ownable {
      * @param subdomainLabelHash - hash of the subdomain
 	 * @param _beneficiary - address that will become owner of this new subdomain
 	 */
-    function _register(string memory _subdomain, bytes32 subdomainLabelHash, address _beneficiary) internal {
-        // Create new subdomain, temporarily this smartcontract is the owner
+    function _register(
+        string memory _subdomain,
+        bytes32 subdomainLabelHash,
+        address _beneficiary,
+        uint256 _createdDate
+    ) internal {
+        // Create new subdomain and assign the _beneficiary as the owner
         registry.setSubnodeOwner(domainNameHash, subdomainLabelHash, _beneficiary);
         // Mint an ERC721 token with the sud domain label hash as its id
         _mint(_beneficiary, uint256(subdomainLabelHash));
         // Map the ERC721 token id with the subdomain for reversion.
         subdomains[subdomainLabelHash] = _subdomain;
         // Emit registered name event
-        emit NameRegistered(msg.sender, _beneficiary, subdomainLabelHash, _subdomain);
+        emit NameRegistered(msg.sender, _beneficiary, subdomainLabelHash, _subdomain, _createdDate);
     }
 
     /**
@@ -1579,9 +1606,27 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
     /**
+     * @dev Returns an URI for a given token ID.
+     * @notice that throws if the token ID does not exist. May return an empty string.
+     * Also, if baseURI is empty, an empty string will be returned.
+     * @param _tokenId - uint256 ID of the token queried
+     * @return token URI
+     */
+    function tokenURI(uint256 _tokenId) external view returns (string memory) {
+        if (bytes(baseURI).length == 0) {
+            return "";
+        }
+
+        require(_exists(_tokenId), "ERC721Metadata: received a URI query for a nonexistent token");
+        return string(abi.encodePacked(baseURI, subdomains[bytes32(_tokenId)]));
+    }
+
+    /**
 	 * @dev Re-claim the ownership of the domain (e.g. "dcl")
-     * @notice After a domain is transferred by the ENS base registrar to this contract, the owner in the ENS registry contract
-     * is still the old owner. Therefore, the owner should call `reclaimDomain` to update the owner of the domain
+     * @notice After a domain is transferred by the ENS base
+     * registrar to this contract, the owner in the ENS registry contract
+     * is still the old owner. Therefore, the owner should call `reclaimDomain`
+     * to update the owner of the domain
 	 * @param _tokenId - erc721 token id which represents the node (domain)
      */
     function reclaimDomain(uint256 _tokenId) public onlyOwner {
@@ -1644,6 +1689,19 @@ contract DCLRegistrar is ERC721Full, Ownable {
         emit BaseUpdated(base, _base);
 
         base = _base;
+    }
+
+    /**
+     * @dev Set Base URI.
+     * @param _baseURI - base URI for token URIs
+     */
+    function updateBaseURI(string memory _baseURI) public onlyOwner {
+        require(
+            keccak256(abi.encodePacked((baseURI))) != keccak256(abi.encodePacked((_baseURI))),
+            "Base URI should be different from old"
+        );
+        emit BaseURI(baseURI, _baseURI);
+        baseURI = _baseURI;
     }
 
     /**

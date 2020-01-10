@@ -18,7 +18,8 @@ contract FakeDCLController is DCLController {
         address indexed _caller,
         address indexed _beneficiary,
         bytes32 indexed _labelHash,
-        string _subdomain
+        string _subdomain,
+        uint256 _createdDate
     );
 
     constructor(

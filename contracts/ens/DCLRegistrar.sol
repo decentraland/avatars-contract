@@ -1,9 +1,10 @@
 
 pragma solidity ^0.5.15;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
-import "openzeppelin-solidity/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721Full.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interfaces/IENSRegistry.sol";
 import "../interfaces/IENSResolver.sol";
@@ -33,6 +34,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
     bytes32 public topdomainNameHash;
     // Domain hash
     bytes32 public domainNameHash;
+    // Base URI
+    string public baseURI;
 
     // Whether the migration of v1 names has finished or not
     bool public migrated;
@@ -68,6 +71,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
     // Emitted when the migration was finished
     event MigrationFinished();
 
+    // Emitted when base URI is was changed
+    event BaseURI(string _oldBaseURI, string _newBaseURI);
+
+
     /**
 	 * @dev Check if the sender is an authorized controller
      */
@@ -98,12 +105,14 @@ contract DCLRegistrar is ERC721Full, Ownable {
      * @param _base - address of the ENS base registrar contract
      * @param _topdomain - top domain (e.g. "eth")
      * @param _domain - domain (e.g. "dcl")
+     * @param _baseURI - base URI for token URIs
 	 */
     constructor(
         IENSRegistry _registry,
         IBaseRegistrar _base,
         string memory _topdomain,
-        string memory _domain
+        string memory _domain,
+        string memory _baseURI
     ) public ERC721Full("DCL Registrar", "DCLENS") {
         // ENS registry
         updateRegistry(_registry);
@@ -122,6 +131,9 @@ contract DCLRegistrar is ERC721Full, Ownable {
         topdomainNameHash = keccak256(abi.encodePacked(emptyNamehash, keccak256(abi.encodePacked(topdomain))));
         // Generate namehash for the domain
         domainNameHash = keccak256(abi.encodePacked(topdomainNameHash, keccak256(abi.encodePacked(domain))));
+
+        // Set base URI
+        updateBaseURI(_baseURI);
     }
 
     /**
@@ -245,6 +257,22 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
     /**
+     * @dev Returns an URI for a given token ID.
+     * @notice that throws if the token ID does not exist. May return an empty string.
+     * Also, if baseURI is empty, an empty string will be returned.
+     * @param _tokenId - uint256 ID of the token queried
+     * @return token URI
+     */
+    function tokenURI(uint256 _tokenId) external view returns (string memory) {
+        if (bytes(baseURI).length == 0) {
+            return "";
+        }
+
+        require(_exists(_tokenId), "ERC721Metadata: received a URI query for a nonexistent token");
+        return string(abi.encodePacked(baseURI, subdomains[bytes32(_tokenId)]));
+    }
+
+    /**
 	 * @dev Re-claim the ownership of the domain (e.g. "dcl")
      * @notice After a domain is transferred by the ENS base
      * registrar to this contract, the owner in the ENS registry contract
@@ -312,6 +340,19 @@ contract DCLRegistrar is ERC721Full, Ownable {
         emit BaseUpdated(base, _base);
 
         base = _base;
+    }
+
+    /**
+     * @dev Set Base URI.
+     * @param _baseURI - base URI for token URIs
+     */
+    function updateBaseURI(string memory _baseURI) public onlyOwner {
+        require(
+            keccak256(abi.encodePacked((baseURI))) != keccak256(abi.encodePacked((_baseURI))),
+            "Base URI should be different from old"
+        );
+        emit BaseURI(baseURI, _baseURI);
+        baseURI = _baseURI;
     }
 
     /**
