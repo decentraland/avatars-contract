@@ -15,6 +15,9 @@ describe('DCL Names V2', function() {
   this.timeout(100000)
 
   // globals
+  const BASE_URI = 'https://decentraland-api.com/v1/'
+  const ONE_DAY = 60 * 60 * 24
+  const CREATED_DATE = Math.round(Date.now() / 1000 - ONE_DAY)
   const TOP_DOMAIN = 'eth'
   const DOMAIN = 'dcl'
   const PRICE = new BN('100000000000000000000')
@@ -149,6 +152,7 @@ describe('DCL Names V2', function() {
       baseRegistrarContract.address,
       TOP_DOMAIN,
       DOMAIN,
+      BASE_URI,
       creationParams
     )
 
@@ -209,6 +213,7 @@ describe('DCL Names V2', function() {
             baseRegistrarContract.address,
             TOP_DOMAIN,
             DOMAIN,
+            BASE_URI,
             creationParams
           ),
           'New registry should be a contract'
@@ -222,6 +227,7 @@ describe('DCL Names V2', function() {
             user,
             TOP_DOMAIN,
             DOMAIN,
+            BASE_URI,
             creationParams
           ),
           'New base should be a contract'
@@ -235,6 +241,7 @@ describe('DCL Names V2', function() {
             baseRegistrarContract.address,
             '',
             DOMAIN,
+            BASE_URI,
             creationParams
           ),
           'Top domain can not be empty'
@@ -248,6 +255,7 @@ describe('DCL Names V2', function() {
             baseRegistrarContract.address,
             TOP_DOMAIN,
             '',
+            BASE_URI,
             creationParams
           ),
           'Domain can not be empty'
@@ -269,13 +277,15 @@ describe('DCL Names V2', function() {
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
 
         await dclRegistrarContract.addController(userController)
-        const { logs } = await dclRegistrarContract.register(
+        const { logs, receipt } = await dclRegistrarContract.register(
           subdomain1,
           anotherUser,
           fromUserController
         )
 
         expect(logs.length).to.be.equal(3)
+        const blockTimestamp = (await web3.eth.getBlock(receipt.blockNumber))
+          .timestamp
 
         const newOwnerLog = logs[0]
         expect(newOwnerLog.event).to.be.equal('NewOwner')
@@ -299,6 +309,7 @@ describe('DCL Names V2', function() {
           subdomain1LabelHash
         )
         expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
+        expect(nameRegisteredLog.args._createdDate).to.eq.BN(blockTimestamp)
 
         balanceOfUser = await dclRegistrarContract.balanceOf(anotherUser)
         expect(balanceOfUser).to.eq.BN(1)
@@ -351,6 +362,7 @@ describe('DCL Names V2', function() {
           baseRegistrarContract.address,
           TOP_DOMAIN,
           'dcl2',
+          BASE_URI,
           creationParams
         )
 
@@ -395,6 +407,7 @@ describe('DCL Names V2', function() {
         const { logs } = await dclRegistrarContract.migrateNames(
           [web3.utils.fromAscii(subdomain1)],
           [user],
+          [CREATED_DATE],
           fromDeployer
         )
 
@@ -422,6 +435,7 @@ describe('DCL Names V2', function() {
           subdomain1LabelHash
         )
         expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
+        expect(nameRegisteredLog.args._createdDate).to.eq.BN(CREATED_DATE)
 
         const balanceOfUser = await dclRegistrarContract.balanceOf(user)
         expect(balanceOfUser).to.eq.BN(1)
@@ -441,20 +455,24 @@ describe('DCL Names V2', function() {
       })
 
       it('should migrate names to subdomains', async function() {
+        const tmpCreatedDate = CREATED_DATE
         const accountLength = accounts.length - 1
         const namesCount = 40
         const eventsPerTx = 3
         const names = []
         const beneficiaries = []
+        const createdDates = []
 
         for (let i = 0; i < namesCount; i++) {
           names.push(web3.utils.fromAscii(subdomain1.concat(i)))
           beneficiaries.push(accounts[i % accountLength])
+          createdDates.push(tmpCreatedDate - i * ONE_DAY)
         }
 
         const { logs } = await dclRegistrarContract.migrateNames(
           names,
           beneficiaries,
+          createdDates,
           fromDeployer
         )
 
@@ -464,6 +482,7 @@ describe('DCL Names V2', function() {
           const name = subdomain1.concat(i / eventsPerTx)
           const nameLabelHash = web3.utils.sha3(name)
           const owner = accounts[(i / eventsPerTx) % accountLength]
+          const createdDate = createdDates[i / eventsPerTx]
 
           const newOwnerLog = logs[i]
           expect(newOwnerLog.event).to.be.equal('NewOwner')
@@ -485,6 +504,7 @@ describe('DCL Names V2', function() {
           expect(nameRegisteredLog.args._beneficiary).to.be.equal(owner)
           expect(nameRegisteredLog.args._labelHash).to.be.equal(nameLabelHash)
           expect(nameRegisteredLog.args._subdomain).to.be.equal(name)
+          expect(nameRegisteredLog.args._createdDate).to.eq.BN(createdDate)
         }
       })
 
@@ -492,6 +512,7 @@ describe('DCL Names V2', function() {
         await dclRegistrarContract.migrateNames(
           [web3.utils.fromAscii(subdomain1)],
           [user],
+          [CREATED_DATE],
           fromDeployer
         )
 
@@ -499,6 +520,7 @@ describe('DCL Names V2', function() {
           dclRegistrarContract.migrateNames(
             [web3.utils.fromAscii(subdomain1)],
             [user],
+            [CREATED_DATE],
             fromDeployer
           ),
           'ERC721: token already minted'
@@ -510,6 +532,7 @@ describe('DCL Names V2', function() {
           dclRegistrarContract.migrateNames(
             [web3.utils.fromAscii(subdomain1)],
             [user],
+            [CREATED_DATE],
             fromHacker
           ),
           'Ownable: caller is not the owner'
@@ -523,6 +546,7 @@ describe('DCL Names V2', function() {
           dclRegistrarContract.migrateNames(
             [web3.utils.fromAscii(subdomain1)],
             [user],
+            [CREATED_DATE],
             fromDeployer
           ),
           'The migration has finished'
@@ -803,6 +827,57 @@ describe('DCL Names V2', function() {
             fromUser
           ),
           'Only base can send NFTs to this contract'
+        )
+      })
+    })
+
+    describe('tokenURI', function() {
+      beforeEach(async () => {
+        await dclRegistrarContract.migrationFinished()
+      })
+
+      it('should return the token URI', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        let tokenURI = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+        expect(tokenURI).to.be.equal(`${BASE_URI}${subdomain1}`)
+
+        await dclRegistrarContract.register(
+          subdomain2,
+          user,
+          fromUserController
+        )
+
+        tokenURI = await dclRegistrarContract.tokenURI(subdomain2LabelHash)
+        expect(tokenURI).to.be.equal(`${BASE_URI}${subdomain2}`)
+      })
+
+      it('should return an empty string if base URI is not set', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        let tokenURI = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+        expect(tokenURI).to.be.equal(`${BASE_URI}${subdomain1}`)
+
+        await dclRegistrarContract.updateBaseURI('', fromDeployer)
+
+        tokenURI = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+        expect(tokenURI).to.be.equal('')
+      })
+
+      it('reverts when trying to return a token URI for an unexisting token', async function() {
+        await assertRevert(
+          dclRegistrarContract.tokenURI(subdomain1LabelHash),
+          'ERC721Metadata: received a URI query for a nonexistent token'
         )
       })
     })
@@ -1188,6 +1263,61 @@ describe('DCL Names V2', function() {
         )
       })
     })
+
+    describe('updateBaseURI', function() {
+      beforeEach(async () => {
+        await dclRegistrarContract.migrationFinished()
+      })
+
+      it('should update base URI', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        let baseURI = await dclRegistrarContract.baseURI()
+        expect(BASE_URI).to.be.equal(baseURI)
+
+        let uri = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+
+        expect(uri).to.be.equal(`${BASE_URI}${subdomain1}`)
+
+        const newBaseURI = 'https'
+
+        const { logs } = await dclRegistrarContract.updateBaseURI(
+          newBaseURI,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('BaseURI')
+        expect(logs[0].args._oldBaseURI).to.be.equal(BASE_URI)
+        expect(logs[0].args._newBaseURI).to.be.equal(newBaseURI)
+
+        baseURI = await dclRegistrarContract.baseURI()
+        expect(newBaseURI).to.be.equal(baseURI)
+
+        uri = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+
+        expect(uri).to.be.equal(`${newBaseURI}${subdomain1}`)
+      })
+
+      it('reverts when trying to change with the same value', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateBaseURI(BASE_URI, fromDeployer),
+          'Base URI should be different from old'
+        )
+      })
+
+      it('reverts when trying to change values by hacker', async function() {
+        await assertRevert(
+          dclRegistrarContract.updateBaseURI('https', fromHacker),
+          'Ownable: caller is not the owner'
+        )
+      })
+    })
   })
 
   describe('DCLController', function() {
@@ -1306,7 +1436,7 @@ describe('DCL Names V2', function() {
         await dclControllerContract.register(name, user, fromUser)
       })
 
-      it('reverts when trying to register a name with a gas parice higher than max gas price', async function() {
+      it('reverts when trying to register a name with a gas price higher than max gas price', async function() {
         await assertRevert(
           dclControllerContract.register(subdomain1, user, {
             ...fromUser,

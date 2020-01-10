@@ -16,6 +16,7 @@ contract FakeDCLRegistrar is DCLRegistrar {
         IENSRegistry _registry,
         IBaseRegistrar _base,
         string memory _topdomain,
-        string memory _domain
-    ) public DCLRegistrar(_registry, _base, _topdomain, _domain) {}
+        string memory _domain,
+        string memory _baseURI
+    ) public DCLRegistrar(_registry, _base, _topdomain, _domain, _baseURI) {}
 }
