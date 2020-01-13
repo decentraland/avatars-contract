@@ -1524,6 +1524,140 @@ describe('DCL Names V2', function() {
         expect(name).to.be.equal('abcdef')
       })
     })
+
+    describe('getTokenId', function() {
+      beforeEach(async () => {
+        await dclRegistrarContract.migrationFinished()
+        await dclRegistrarContract.addController(userController)
+      })
+
+      it('should return the token id for a subdomain', async function() {
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        let tokenId = await dclRegistrarContract.getTokenId(subdomain1)
+        expect(tokenId).to.eq.BN(web3.utils.toBN(subdomain1LabelHash))
+
+        await dclRegistrarContract.register(
+          subdomain2,
+          user,
+          fromUserController
+        )
+
+        tokenId = await dclRegistrarContract.getTokenId(subdomain2)
+        expect(tokenId).to.be.equal(user)
+
+        await dclRegistrarContract.register(
+          subdomain3,
+          user,
+          fromUserController
+        )
+
+        tokenId = await dclRegistrarContract.getTokenId(subdomain3)
+        expect(tokenId).to.eq.BN(web3.utils.toBN(subdomain3LabelHash))
+      })
+
+      it('should get token id of a subdomain with uppercases', async function() {
+        await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          user,
+          fromUserController
+        )
+
+        const tokenId = await dclRegistrarContract.getTokenId(
+          subdomain1WithLocale
+        )
+        expect(tokenId).to.eq.BN(web3.utils.toBN(subdomain1LabelHash))
+      })
+
+      it('reverts when trying to get a token id for a non-existing subdomain', async function() {
+        await assertRevert(
+          dclRegistrarContract.getTokenId(subdomain1WithLocale),
+          'The subdomain is not registered'
+        )
+
+        await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          user,
+          fromUserController
+        )
+
+        await assertRevert(
+          dclRegistrarContract.getTokenId(subdomain1),
+          'The subdomain is not registered'
+        )
+      })
+    })
+
+    describe('getOwnerOf', function() {
+      beforeEach(async () => {
+        await dclRegistrarContract.migrationFinished()
+        await dclRegistrarContract.addController(userController)
+      })
+
+      it('should return the token id for a subdomain', async function() {
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        let owner = await dclRegistrarContract.getOwnerOf(subdomain1)
+        expect(owner).to.be.equal(user)
+
+        await dclRegistrarContract.register(
+          subdomain2,
+          anotherUser,
+          fromUserController
+        )
+
+        owner = await dclRegistrarContract.getOwnerOf(subdomain2)
+        expect(owner).to.be.equal(anotherUser)
+
+        await dclRegistrarContract.register(
+          subdomain3,
+          user,
+          fromUserController
+        )
+
+        owner = await dclRegistrarContract.getOwnerOf(subdomain3)
+        expect(owner).to.be.equal(user)
+      })
+
+      it('should get token id of a subdomain with uppercases', async function() {
+        await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          user,
+          fromUserController
+        )
+
+        const owner = await dclRegistrarContract.getOwnerOf(
+          subdomain1WithLocale
+        )
+        expect(owner).to.be.equal(user)
+      })
+
+      it('reverts when trying to get a token id for a non-existing subdomain', async function() {
+        await assertRevert(
+          dclRegistrarContract.getOwnerOf(subdomain1WithLocale),
+          'The subdomain is not registered'
+        )
+
+        await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          user,
+          fromUserController
+        )
+
+        await assertRevert(
+          dclRegistrarContract.getOwnerOf(subdomain1),
+          'The subdomain is not registered'
+        )
+      })
+    })
   })
 
   describe('DCLController', function() {
