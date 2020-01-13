@@ -1429,11 +1429,37 @@ describe('DCL Names V2', function() {
         let name = 'qwertyuiopasdfg'
         await dclControllerContract.register(name, user, fromUser)
 
+        let tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
+        let subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+
         name = 'hjklzxcvbnm'
         await dclControllerContract.register(name, user, fromUser)
+        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 1)
+        subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
 
         name = 'abc'
         await dclControllerContract.register(name, user, fromUser)
+        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 2)
+        subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+      })
+
+      it('should register a name with 0-9', async function() {
+        const name = '123456789'
+        await dclControllerContract.register(name, user, fromUser)
+        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
+        const subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+      })
+
+      it('should register a name with a-z and 0-9', async function() {
+        const name = '123456789abcd'
+        await dclControllerContract.register(name, user, fromUser)
+        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
+        const subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
       })
 
       it('reverts when trying to register a name with a gas price higher than max gas price', async function() {
@@ -1466,12 +1492,6 @@ describe('DCL Names V2', function() {
         )
 
         name = 'Username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '1username'
         await assertRevert(
           dclControllerContract.register(name, user, fromUser),
           'Invalid Character'

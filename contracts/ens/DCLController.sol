@@ -113,8 +113,16 @@ contract DCLController is Ownable {
             "Name should be greather than or equal to 3 and less than or equal to 15"
         );
         for(uint256 i = 0; i < tempName.length; i++) {
-            require(tempName[i] >= 0x60 && tempName[i] <= 0x7A, "Invalid Character");
+            require(_isLowerCaseLetter(tempName[i]) || _isNumber(tempName[i]), "Invalid Character");
         }
+    }
+
+    function _isLowerCaseLetter(bytes1 _char) internal pure returns (bool) {
+        return (_char >= 0x60 && _char <= 0x7A);
+    }
+
+    function _isNumber(bytes1 _char) internal pure returns (bool) {
+        return (_char >= 0x30 && _char <= 0x39);
     }
 
 }

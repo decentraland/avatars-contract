@@ -310,7 +310,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function removeController(address controller) external onlyOwner {
-        require(controllers[controller] == true, "The controller is already disbled");
+        require(controllers[controller], "The controller is already disbled");
         controllers[controller] = false;
         emit ControllerRemoved(controller);
     }
