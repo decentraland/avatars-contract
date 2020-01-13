@@ -256,8 +256,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
     /**
-	 * @dev Get the token id by its subdomain
-	 * @param _subdomain - string of the subdomain
+     * @dev Get the token id by its subdomain
+     * @param _subdomain - string of the subdomain
      * @return token id mapped to the subdomain
      */
     function getTokenId(string memory _subdomain) public view returns (uint256) {
@@ -270,8 +270,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
      /**
-	 * @dev Get the owner of a subdomain
-	 * @param _subdomain - string of the subdomain
+     * @dev Get the owner of a subdomain
+     * @param _subdomain - string of the subdomain
      * @return owner of the subdomain
      */
     function getOwnerOf(string memory _subdomain) public view returns (address) {
