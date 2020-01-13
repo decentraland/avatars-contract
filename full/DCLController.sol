@@ -380,12 +380,20 @@ contract DCLController is Ownable {
     function _requireNameValid(string memory _name) internal pure {
         bytes memory tempName = bytes(_name);
         require(
-            tempName.length >= 3 && tempName.length <= 15,
-            "Name should be greather than or equal to 3 and less than or equal to 15"
+            tempName.length >= 2 && tempName.length <= 15,
+            "Name should be greather than or equal to 2 and less than or equal to 15"
         );
         for(uint256 i = 0; i < tempName.length; i++) {
-            require(tempName[i] >= 0x60 && tempName[i] <= 0x7A, "Invalid Character");
+            require(_isLetter(tempName[i]) || _isNumber(tempName[i]), "Invalid Character");
         }
+    }
+
+    function _isLetter(bytes1 _char) internal pure returns (bool) {
+        return (_char >= 0x41 && _char <= 0x5A) || (_char >= 0x61 && _char <= 0x7A);
+    }
+
+    function _isNumber(bytes1 _char) internal pure returns (bool) {
+        return (_char >= 0x30 && _char <= 0x39);
     }
 
 }

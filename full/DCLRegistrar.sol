@@ -1499,7 +1499,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
             string memory name = _bytes32ToString(_names[i]);
             _register(
                 name,
-                keccak256(abi.encodePacked(name)),
+                keccak256(abi.encodePacked(_toLowerCase(name))),
                 _beneficiaries[i],
                 _createdDates[i]
             );
@@ -1517,8 +1517,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
         require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
+        // Lower the subdomain
+        string memory subdomainLowerred = _toLowerCase(_subdomain);
         // Create labelhash for the subdomain
-        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_subdomain));
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(subdomainLowerred));
         // Create namehash for the subdomain
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
@@ -1659,7 +1661,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function removeController(address controller) external onlyOwner {
-        require(controllers[controller] == true, "The controller is already disbled");
+        require(controllers[controller], "The controller is already disbled");
         controllers[controller] = false;
         emit ControllerRemoved(controller);
     }
@@ -1734,5 +1736,26 @@ contract DCLRegistrar is ERC721Full, Ownable {
         }
 
         return out;
+    }
+
+    /**
+     * @dev Lowercase a string.
+     * @param _str - to be converted to string.
+     * @return string
+     */
+    function _toLowerCase(string memory _str) internal pure returns (string memory) {
+        bytes memory bStr = bytes(_str);
+        bytes memory bLower = new bytes(bStr.length);
+
+        for (uint i = 0; i < bStr.length; i++) {
+            // Uppercase character...
+            if ((bStr[i] >= 0x41) && (bStr[i] <= 0x5A)) {
+                // So we add 0x20 to make it lowercase
+                bLower[i] = bytes1(uint8(bStr[i]) + 0x20);
+            } else {
+                bLower[i] = bStr[i];
+            }
+        }
+        return string(bLower);
     }
 }
