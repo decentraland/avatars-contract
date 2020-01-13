@@ -168,10 +168,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
         require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
-        // Lower the subdomain
-        string memory subdomainLowerred = _toLowerCase(_subdomain);
         // Create labelhash for the subdomain
-        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(subdomainLowerred));
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
         // Create namehash for the subdomain
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
