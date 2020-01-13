@@ -512,7 +512,7 @@ describe('DCL Names V2', function() {
         await contract.addController(userController)
         await assertRevert(
           contract.register(subdomain1, user, fromUserController),
-          'The contract doesn not own the domain'
+          'The contract does not own the domain'
         )
       })
 
@@ -1287,7 +1287,7 @@ describe('DCL Names V2', function() {
       it('reverts when trying to remove a controller already removed or unexistant', async function() {
         await assertRevert(
           dclRegistrarContract.removeController(user, fromDeployer),
-          'The controller is already disbled'
+          'The controller is already disabled'
         )
 
         await dclRegistrarContract.addController(user, fromDeployer)
@@ -1295,7 +1295,7 @@ describe('DCL Names V2', function() {
 
         await assertRevert(
           dclRegistrarContract.removeController(user, fromDeployer),
-          'The controller is already disbled'
+          'The controller is already disabled'
         )
       })
     })

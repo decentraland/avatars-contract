@@ -167,7 +167,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address _beneficiary
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
-        require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
+        require(registry.owner(domainNameHash) == address(this), "The contract does not own the domain");
         // Create labelhash for the subdomain
         bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
         // Create namehash for the subdomain
@@ -333,7 +333,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function removeController(address controller) external onlyOwner {
-        require(controllers[controller], "The controller is already disbled");
+        require(controllers[controller], "The controller is already disabled");
         controllers[controller] = false;
         emit ControllerRemoved(controller);
     }
