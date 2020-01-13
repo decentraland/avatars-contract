@@ -19,4 +19,12 @@ contract FakeDCLRegistrar is DCLRegistrar {
         string memory _domain,
         string memory _baseURI
     ) public DCLRegistrar(_registry, _base, _topdomain, _domain, _baseURI) {}
+
+    function bytes32ToString(bytes32 _str) public pure returns (string memory) {
+        return _bytes32ToString(_str);
+    }
+
+    function toLowerCase(string memory _str) public pure returns (string memory) {
+        return _toLowerCase(_str);
+    }
 }

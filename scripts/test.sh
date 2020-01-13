@@ -13,11 +13,7 @@ cleanup() {
   fi
 }
 
-if [ "$SOLIDITY_COVERAGE" = true ]; then
-  ganache_port=8555
-else
-  ganache_port=8545
-fi
+ganache_port=8545
 
 ganache_running() {
   nc -z localhost "$ganache_port"
@@ -42,7 +38,7 @@ start_ganache() {
   )
 
   # Gas limit of 7,000,000
-  node_modules/.bin/ganache-cli --gasLimit 0x6acfc0 "${accounts[@]}" --port "$ganache_port" > /dev/null &
+  node_modules/.bin/ganache-cli --gasLimit 0x6acfc00 "${accounts[@]}" --port "$ganache_port" > /dev/null &
 
   ganache_pid=$!
 }
@@ -57,4 +53,8 @@ fi
 
 
 #npx buidler test
-npx buidler test
+if [ "$SOLIDITY_COVERAGE" = true ]; then
+  npx buidler coverage
+else
+  npx buidler test
+fi

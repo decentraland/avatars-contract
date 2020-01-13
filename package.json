@@ -41,6 +41,7 @@
     "mocha": "^6.0.2",
     "openzeppelin-solidity": "^2.4.0",
     "prettier": "^1.19.1",
+    "solidity-coverage": "^0.7.1",
     "solium": "^1.2.3",
     "truffle": "^5.1.5",
     "truffle-flattener": "^1.2.4"

@@ -150,7 +150,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
             string memory name = _bytes32ToString(_names[i]);
             _register(
                 name,
-                keccak256(abi.encodePacked(name)),
+                keccak256(abi.encodePacked(_toLowerCase(name))),
                 _beneficiaries[i],
                 _createdDates[i]
             );
@@ -167,9 +167,9 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address _beneficiary
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
-        require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
+        require(registry.owner(domainNameHash) == address(this), "The contract does not own the domain");
         // Create labelhash for the subdomain
-        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_subdomain));
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
         // Create namehash for the subdomain
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
@@ -256,6 +256,29 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
     /**
+     * @dev Get the token id by its subdomain
+     * @param _subdomain - string of the subdomain
+     * @return token id mapped to the subdomain
+     */
+    function getTokenId(string memory _subdomain) public view returns (uint256) {
+        bytes32 labelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
+        require(
+            keccak256(abi.encodePacked((subdomains[labelHash]))) == keccak256(abi.encodePacked((_subdomain))),
+            "The subdomain is not registered"
+        );
+        return uint256(labelHash);
+    }
+
+     /**
+     * @dev Get the owner of a subdomain
+     * @param _subdomain - string of the subdomain
+     * @return owner of the subdomain
+     */
+    function getOwnerOf(string memory _subdomain) public view returns (address) {
+        return ownerOf(getTokenId(_subdomain));
+    }
+
+    /**
      * @dev Returns an URI for a given token ID.
      * @notice that throws if the token ID does not exist. May return an empty string.
      * Also, if baseURI is empty, an empty string will be returned.
@@ -310,7 +333,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function removeController(address controller) external onlyOwner {
-        require(controllers[controller] == true, "The controller is already disbled");
+        require(controllers[controller], "The controller is already disabled");
         controllers[controller] = false;
         emit ControllerRemoved(controller);
     }
@@ -385,5 +408,26 @@ contract DCLRegistrar is ERC721Full, Ownable {
         }
 
         return out;
+    }
+
+    /**
+     * @dev Lowercase a string.
+     * @param _str - to be converted to string.
+     * @return string
+     */
+    function _toLowerCase(string memory _str) internal pure returns (string memory) {
+        bytes memory bStr = bytes(_str);
+        bytes memory bLower = new bytes(bStr.length);
+
+        for (uint i = 0; i < bStr.length; i++) {
+            // Uppercase character...
+            if ((bStr[i] >= 0x41) && (bStr[i] <= 0x5A)) {
+                // So we add 0x20 to make it lowercase
+                bLower[i] = bytes1(uint8(bStr[i]) + 0x20);
+            } else {
+                bLower[i] = bStr[i];
+            }
+        }
+        return string(bLower);
     }
 }
