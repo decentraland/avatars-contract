@@ -471,7 +471,7 @@ describe('DCL Names V2', function() {
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
       })
 
-      it('should own more than once name', async function() {
+      it('should own more than one name', async function() {
         await dclRegistrarContract.migrationFinished()
         await dclRegistrarContract.addController(userController)
         await dclRegistrarContract.register(
