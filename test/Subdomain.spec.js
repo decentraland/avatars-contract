@@ -44,6 +44,7 @@ describe('DCL Names V2', function() {
   )
 
   const subdomain1 = 'nacho'
+  const subdomain1WithLocale = 'Nacho'
   const subdomain1LabelHash = web3.utils.sha3(subdomain1)
   const subdomain1Hash = web3.utils.sha3(
     web3.eth.abi.encodeParameters(
@@ -54,6 +55,15 @@ describe('DCL Names V2', function() {
 
   const subdomain2 = 'dani'
   const subdomain2LabelHash = web3.utils.sha3(subdomain2)
+
+  const subdomain3 = 'nacho1'
+  const subdomain3LabelHash = web3.utils.sha3(subdomain3)
+  const subdomain3Hash = web3.utils.sha3(
+    web3.eth.abi.encodeParameters(
+      ['bytes32', 'bytes32'],
+      [dclDomainHash, subdomain3LabelHash]
+    )
+  )
 
   let creationParams
 
@@ -329,6 +339,138 @@ describe('DCL Names V2', function() {
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
       })
 
+      it('should register a name with uppercase by an authorized account', async function() {
+        await dclRegistrarContract.migrationFinished()
+
+        let balanceOfUser = await dclRegistrarContract.balanceOf(anotherUser)
+        expect(balanceOfUser).to.eq.BN(0)
+
+        let subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+        expect(subdomainOwner).to.be.equal(ZERO_ADDRESS)
+
+        let currentResolver = await ensRegistryContract.resolver(subdomain1Hash)
+        expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+
+        await dclRegistrarContract.addController(userController)
+        const { logs, receipt } = await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          anotherUser,
+          fromUserController
+        )
+
+        expect(logs.length).to.be.equal(3)
+        const blockTimestamp = (await web3.eth.getBlock(receipt.blockNumber))
+          .timestamp
+
+        const newOwnerLog = logs[0]
+        expect(newOwnerLog.event).to.be.equal('NewOwner')
+        expect(newOwnerLog.args.node).to.be.equal(dclDomainHash)
+        expect(newOwnerLog.args.label).to.be.equal(subdomain1LabelHash)
+        expect(newOwnerLog.args.owner).to.be.equal(anotherUser)
+
+        const transferLog = logs[1]
+        expect(transferLog.event).to.be.equal('Transfer')
+        expect(transferLog.args.from).to.be.equal(ZERO_ADDRESS)
+        expect(transferLog.args.to).to.be.equal(anotherUser)
+        expect(transferLog.args.tokenId).to.eq.BN(
+          web3.utils.toBN(subdomain1LabelHash)
+        )
+
+        const nameRegisteredLog = logs[2]
+        expect(nameRegisteredLog.event).to.be.equal('NameRegistered')
+        expect(nameRegisteredLog.args._caller).to.be.equal(userController)
+        expect(nameRegisteredLog.args._beneficiary).to.be.equal(anotherUser)
+        expect(nameRegisteredLog.args._labelHash).to.be.equal(
+          subdomain1LabelHash
+        )
+        expect(nameRegisteredLog.args._subdomain).to.be.equal(
+          subdomain1WithLocale
+        )
+        expect(nameRegisteredLog.args._createdDate).to.eq.BN(blockTimestamp)
+
+        balanceOfUser = await dclRegistrarContract.balanceOf(anotherUser)
+        expect(balanceOfUser).to.eq.BN(1)
+
+        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(
+          anotherUser,
+          0
+        )
+        const subdomain = await dclRegistrarContract.subdomains(tokenId)
+
+        expect(subdomain).to.be.equal(subdomain1WithLocale)
+
+        subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+        expect(subdomainOwner).to.be.equal(anotherUser)
+
+        currentResolver = await ensRegistryContract.resolver(subdomain1Hash)
+        expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+      })
+
+      it('should register a name with numbers by an authorized account', async function() {
+        await dclRegistrarContract.migrationFinished()
+
+        let balanceOfUser = await dclRegistrarContract.balanceOf(anotherUser)
+        expect(balanceOfUser).to.eq.BN(0)
+
+        let subdomainOwner = await ensRegistryContract.owner(subdomain3Hash)
+        expect(subdomainOwner).to.be.equal(ZERO_ADDRESS)
+
+        let currentResolver = await ensRegistryContract.resolver(subdomain3Hash)
+        expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+
+        await dclRegistrarContract.addController(userController)
+        const { logs, receipt } = await dclRegistrarContract.register(
+          subdomain3,
+          anotherUser,
+          fromUserController
+        )
+
+        expect(logs.length).to.be.equal(3)
+        const blockTimestamp = (await web3.eth.getBlock(receipt.blockNumber))
+          .timestamp
+
+        const newOwnerLog = logs[0]
+        expect(newOwnerLog.event).to.be.equal('NewOwner')
+        expect(newOwnerLog.args.node).to.be.equal(dclDomainHash)
+        expect(newOwnerLog.args.label).to.be.equal(subdomain3LabelHash)
+        expect(newOwnerLog.args.owner).to.be.equal(anotherUser)
+
+        const transferLog = logs[1]
+        expect(transferLog.event).to.be.equal('Transfer')
+        expect(transferLog.args.from).to.be.equal(ZERO_ADDRESS)
+        expect(transferLog.args.to).to.be.equal(anotherUser)
+        expect(transferLog.args.tokenId).to.eq.BN(
+          web3.utils.toBN(subdomain3LabelHash)
+        )
+
+        const nameRegisteredLog = logs[2]
+        expect(nameRegisteredLog.event).to.be.equal('NameRegistered')
+        expect(nameRegisteredLog.args._caller).to.be.equal(userController)
+        expect(nameRegisteredLog.args._beneficiary).to.be.equal(anotherUser)
+        expect(nameRegisteredLog.args._labelHash).to.be.equal(
+          subdomain3LabelHash
+        )
+        expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain3)
+        expect(nameRegisteredLog.args._createdDate).to.eq.BN(blockTimestamp)
+
+        balanceOfUser = await dclRegistrarContract.balanceOf(anotherUser)
+        expect(balanceOfUser).to.eq.BN(1)
+
+        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(
+          anotherUser,
+          0
+        )
+        const subdomain = await dclRegistrarContract.subdomains(tokenId)
+
+        expect(subdomain).to.be.equal(subdomain3)
+
+        subdomainOwner = await ensRegistryContract.owner(subdomain3Hash)
+        expect(subdomainOwner).to.be.equal(anotherUser)
+
+        currentResolver = await ensRegistryContract.resolver(subdomain3Hash)
+        expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+      })
+
       it('should own more than once name', async function() {
         await dclRegistrarContract.migrationFinished()
         await dclRegistrarContract.addController(userController)
@@ -385,6 +527,26 @@ describe('DCL Names V2', function() {
 
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUserController),
+          'Subdomain already owned'
+        )
+
+        const subdomainWithUppercase = subdomain1.toLocaleUpperCase()
+
+        await assertRevert(
+          dclControllerContract.register(
+            subdomainWithUppercase,
+            user,
+            fromUserController
+          ),
+          'Subdomain already owned'
+        )
+
+        await assertRevert(
+          dclControllerContract.register(
+            subdomain1WithLocale,
+            user,
+            fromUserController
+          ),
           'Subdomain already owned'
         )
       })
@@ -1318,6 +1480,50 @@ describe('DCL Names V2', function() {
         )
       })
     })
+
+    describe('utils', function() {
+      it('should convert bytes32 to string', async function() {
+        let name = await dclRegistrarContract.bytes32ToString(
+          web3.utils.fromAscii(subdomain1)
+        )
+        expect(name).to.be.equal(subdomain1)
+
+        name = await dclRegistrarContract.bytes32ToString(
+          web3.utils.fromAscii(subdomain1WithLocale)
+        )
+        expect(name).to.be.equal(subdomain1WithLocale)
+
+        name = await dclRegistrarContract.bytes32ToString(
+          web3.utils.fromAscii(subdomain3)
+        )
+        expect(name).to.be.equal(subdomain3)
+
+        name = await dclRegistrarContract.bytes32ToString(
+          web3.utils.fromAscii('()()())')
+        )
+        expect(name).to.be.equal('()()())')
+      })
+
+      it('should lowerCase a string', async function() {
+        let name = await dclRegistrarContract.toLowerCase(subdomain1)
+        expect(name).to.be.equal(subdomain1)
+
+        name = await dclRegistrarContract.toLowerCase(subdomain1WithLocale)
+        expect(name).to.be.equal(subdomain1)
+
+        name = await dclRegistrarContract.toLowerCase(subdomain3)
+        expect(name).to.be.equal(subdomain3)
+
+        name = await dclRegistrarContract.toLowerCase('()()())')
+        expect(name).to.be.equal('()()())')
+
+        name = await dclRegistrarContract.toLowerCase('한')
+        expect(name).to.be.equal('한')
+
+        name = await dclRegistrarContract.toLowerCase('ABCDeF')
+        expect(name).to.be.equal('abcdef')
+      })
+    })
   })
 
   describe('DCLController', function() {
@@ -1446,6 +1652,27 @@ describe('DCL Names V2', function() {
         expect(subdomain).to.be.equal(name)
       })
 
+      it('should register a name with A-Z', async function() {
+        let name = 'QWERTYUIOPASDFG'
+        await dclControllerContract.register(name, user, fromUser)
+
+        let tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
+        let subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+
+        name = 'HJKLZXCVBNM'
+        await dclControllerContract.register(name, user, fromUser)
+        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 1)
+        subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+
+        name = 'ABC'
+        await dclControllerContract.register(name, user, fromUser)
+        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 2)
+        subdomain = await dclRegistrarContract.subdomains(tokenId)
+        expect(subdomain).to.be.equal(name)
+      })
+
       it('should register a name with 0-9', async function() {
         const name = '123456789'
         await dclControllerContract.register(name, user, fromUser)
@@ -1454,8 +1681,8 @@ describe('DCL Names V2', function() {
         expect(subdomain).to.be.equal(name)
       })
 
-      it('should register a name with a-z and 0-9', async function() {
-        const name = '123456789abcd'
+      it('should register a name with a-A and 0-9', async function() {
+        const name = '123456789aBcd'
         await dclControllerContract.register(name, user, fromUser)
         const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
         const subdomain = await dclRegistrarContract.subdomains(tokenId)
@@ -1491,12 +1718,6 @@ describe('DCL Names V2', function() {
           'Invalid Character'
         )
 
-        name = 'Username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
         name = '^"}username'
         await assertRevert(
           dclControllerContract.register(name, user, fromUser),
@@ -1504,6 +1725,60 @@ describe('DCL Names V2', function() {
         )
 
         name = '👍username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        name = '€username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        name = '𐍈username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x2F
+        name = ':username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x3A
+        name = '/username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x40
+        name = '@username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x5b
+        name = '[username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x60
+        name = '`username'
+        await assertRevert(
+          dclControllerContract.register(name, user, fromUser),
+          'Invalid Character'
+        )
+
+        // Edge cases on ascii table 0x7B
+        name = '{username'
         await assertRevert(
           dclControllerContract.register(name, user, fromUser),
           'Invalid Character'
@@ -1544,28 +1819,23 @@ describe('DCL Names V2', function() {
         await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
       })
 
-      it('reverts when username is greather than 15 bytes', async function() {
+      it('reverts when username is lower than 2 and greather than 15 bytes', async function() {
         const bigUsername = 'abignameregistry'
         await assertRevert(
           dclControllerContract.register(bigUsername, user, fromUser),
-          'Name should be greather than or equal to 3 and less than or equal to 15'
+          'Name should be greather than or equal to 2 and less than or equal to 15'
         )
       })
 
       it('reverts when trying to register a name with a lenght < 3', async function() {
         await assertRevert(
           dclControllerContract.register('', user, fromUser),
-          'Name should be greather than or equal to 3 and less than or equal to 15'
+          'Name should be greather than or equal to 2 and less than or equal to 15'
         )
 
         await assertRevert(
           dclControllerContract.register('a', user, fromUser),
-          'Name should be greather than or equal to 3 and less than or equal to 15'
-        )
-
-        await assertRevert(
-          dclControllerContract.register('ab', user, fromUser),
-          'Name should be greather than or equal to 3 and less than or equal to 15'
+          'Name should be greather than or equal to 2 and less than or equal to 15'
         )
       })
 
