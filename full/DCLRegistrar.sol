@@ -1516,11 +1516,9 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address _beneficiary
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
-        require(registry.owner(domainNameHash) == address(this), "The contract doesn not own the domain");
-        // Lower the subdomain
-        string memory subdomainLowerred = _toLowerCase(_subdomain);
+        require(registry.owner(domainNameHash) == address(this), "The contract does not own the domain");
         // Create labelhash for the subdomain
-        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(subdomainLowerred));
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
         // Create namehash for the subdomain
         bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
@@ -1607,6 +1605,29 @@ contract DCLRegistrar is ERC721Full, Ownable {
     }
 
     /**
+	 * @dev Get the token id by its subdomain
+	 * @param _subdomain - string of the subdomain
+     * @return token id mapped to the subdomain
+     */
+    function getTokenId(string memory _subdomain) public view returns (uint256) {
+        bytes32 labelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
+        require(
+            keccak256(abi.encodePacked((subdomains[labelHash]))) == keccak256(abi.encodePacked((_subdomain))),
+            "The subdomain is not registered"
+        );
+        return uint256(labelHash);
+    }
+
+     /**
+	 * @dev Get the owner of a subdomain
+	 * @param _subdomain - string of the subdomain
+     * @return owner of the subdomain
+     */
+    function getOwnerOf(string memory _subdomain) public view returns (address) {
+        return ownerOf(getTokenId(_subdomain));
+    }
+
+    /**
      * @dev Returns an URI for a given token ID.
      * @notice that throws if the token ID does not exist. May return an empty string.
      * Also, if baseURI is empty, an empty string will be returned.
@@ -1661,7 +1682,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @param controller - address of the controller
      */
     function removeController(address controller) external onlyOwner {
-        require(controllers[controller], "The controller is already disbled");
+        require(controllers[controller], "The controller is already disabled");
         controllers[controller] = false;
         emit ControllerRemoved(controller);
     }

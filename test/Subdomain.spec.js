@@ -1548,7 +1548,7 @@ describe('DCL Names V2', function() {
         )
 
         tokenId = await dclRegistrarContract.getTokenId(subdomain2)
-        expect(tokenId).to.be.equal(user)
+        expect(tokenId).to.eq.BN(web3.utils.toBN(subdomain2LabelHash))
 
         await dclRegistrarContract.register(
           subdomain3,
