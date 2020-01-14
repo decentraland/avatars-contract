@@ -1,6 +1,6 @@
 pragma solidity ^0.5.15;
 
-import "../../contracts/interfaces/IENSRegistry.sol";
+import "../interfaces/IENSRegistry.sol";
 
 contract FakeENSRegistryFactory {
     address public ensRegistryAddress;

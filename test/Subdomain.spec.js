@@ -104,7 +104,7 @@ describe('DCL Names V2', function() {
 
     creationParams = {
       ...fromDeployer,
-      gas: 6e6,
+      //gas: 6e6,
       gasPrice: 21e9
     }
 
@@ -2217,7 +2217,7 @@ describe('DCL Names V2', function() {
       expect(subdomainOwner).to.be.equal(anotherUser)
     })
 
-    it('reverts when trying to change the resolver by an unauthorized account', async function() {
+    it('reverts when trying to change the resolver by an unauthorized account [ @skip-on-coverage ]', async function() {
       await dclControllerContract.register(subdomain1, user, fromUser)
 
       await assertRevert(
@@ -2312,7 +2312,7 @@ describe('DCL Names V2', function() {
       )
     })
 
-    it('reverts when trying to set the owner for subdomain by an unauthorized account', async function() {
+    it('reverts when trying to set the owner for subdomain by an unauthorized account [ @skip-on-coverage ]', async function() {
       await dclControllerContract.register(subdomain1, user, fromUser)
 
       await assertRevert(
@@ -2320,7 +2320,7 @@ describe('DCL Names V2', function() {
       )
     })
 
-    it('reverts when trying to set a subnode owner for a domain by an unauthorized account', async function() {
+    it('reverts when trying to set a subnode owner for a domain by an unauthorized account [ @skip-on-coverage ]', async function() {
       await assertRevert(
         ensRegistryContract.setSubnodeOwner(
           dclDomainHash,

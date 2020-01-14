@@ -1,6 +1,6 @@
 pragma solidity ^0.5.15;
 
-import "../../contracts/ens/DCLController.sol";
+import "../ens/DCLController.sol";
 
 
 contract FakeDCLController is DCLController {

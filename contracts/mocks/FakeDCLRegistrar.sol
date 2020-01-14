@@ -1,6 +1,6 @@
 pragma solidity ^0.5.15;
 
-import "../../contracts/ens/DCLRegistrar.sol";
+import "../ens/DCLRegistrar.sol";
 
 
 contract FakeDCLRegistrar is DCLRegistrar {
