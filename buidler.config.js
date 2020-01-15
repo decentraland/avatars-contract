@@ -18,11 +18,5 @@ module.exports = {
       enabled: true,
       runs: 200
     }
-  },
-  networks: {
-    soliditycoverage: {
-      gas: 9000000,
-      url: 'http://localhost:8555'
-    }
   }
 }
