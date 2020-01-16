@@ -1050,9 +1050,7 @@ describe('DCL Names V2', function() {
       })
 
       it('should return whether a name is available or not', async function() {
-        let isAvailable = await dclRegistrarContract.available(
-          subdomain1LabelHash
-        )
+        let isAvailable = await dclRegistrarContract.available(subdomain1)
         expect(isAvailable).to.be.equal(true)
 
         await dclRegistrarContract.addController(userController)
@@ -1062,10 +1060,13 @@ describe('DCL Names V2', function() {
           fromUserController
         )
 
-        isAvailable = await dclRegistrarContract.available(subdomain1LabelHash)
+        isAvailable = await dclRegistrarContract.available(subdomain1)
         expect(isAvailable).to.be.equal(false)
 
-        isAvailable = await dclRegistrarContract.available(subdomain2LabelHash)
+        isAvailable = await dclRegistrarContract.available(subdomain1WithLocale)
+        expect(isAvailable).to.be.equal(false)
+
+        isAvailable = await dclRegistrarContract.available(subdomain2)
         expect(isAvailable).to.be.equal(true)
       })
     })
