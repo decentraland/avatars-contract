@@ -4,8 +4,6 @@ import "../ens/DCLRegistrar.sol";
 
 
 contract FakeDCLRegistrar is DCLRegistrar {
-    // ERC721
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
      // ENS Registry
     event NewOwner(bytes32 indexed node, bytes32 indexed label, address owner);
     event Transfer(bytes32 indexed node, address owner);
