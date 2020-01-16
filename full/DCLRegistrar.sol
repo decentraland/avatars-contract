@@ -1519,10 +1519,8 @@ contract DCLRegistrar is ERC721Full, Ownable {
         require(registry.owner(domainNameHash) == address(this), "The contract does not own the domain");
         // Create labelhash for the subdomain
         bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
-        // Create namehash for the subdomain
-        bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, subdomainLabelHash));
         // Make sure it is free
-        require(available(subdomainNameHash), "Subdomain already owned");
+        require(_available(subdomainLabelHash), "Subdomain already owned");
         // solium-disable-next-line security/no-block-members
         _register(_subdomain, subdomainLabelHash, _beneficiary, now);
     }
@@ -1596,12 +1594,26 @@ contract DCLRegistrar is ERC721Full, Ownable {
 
     /**
 	 * @dev Check whether a name is available to be registered or not
-	 * @param _labelhash - hash of the name to check
+	 * @param _subdomain - name to check
      * @return whether the name is available or not
      */
-    function available(bytes32 _labelhash) public view returns (bool) {
+    function available(string memory _subdomain) public view returns (bool) {
+        // Create labelhash for the subdomain
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
+        return _available(subdomainLabelHash);
+    }
+
+
+    /**
+	 * @dev Check whether a name is available to be registered or not
+	 * @param _subdomainLabelHash - hash of the name to check
+     * @return whether the name is available or not
+     */
+    function _available(bytes32 _subdomainLabelHash) internal view returns (bool) {
+        // Create namehash for the subdomain (node)
+        bytes32 subdomainNameHash = keccak256(abi.encodePacked(domainNameHash, _subdomainLabelHash));
         // Make sure it is free
-        return registry.owner(_labelhash) == address(0) && !_exists(uint256(_labelhash));
+        return registry.owner(subdomainNameHash) == address(0) && !_exists(uint256(_subdomainLabelHash));
     }
 
     /**
