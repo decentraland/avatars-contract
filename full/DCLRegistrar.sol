@@ -1622,12 +1622,16 @@ contract DCLRegistrar is ERC721Full, Ownable {
      * @return token id mapped to the subdomain
      */
     function getTokenId(string memory _subdomain) public view returns (uint256) {
-        bytes32 labelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
+        string memory subdomain = _toLowerCase(_subdomain);
+        bytes32 subdomainLabelHash = keccak256(abi.encodePacked(subdomain));
+        uint256 tokenId = uint256(subdomainLabelHash);
+
         require(
-            keccak256(abi.encodePacked((subdomains[labelHash]))) == keccak256(abi.encodePacked((_subdomain))),
+            _exists(tokenId),
             "The subdomain is not registered"
         );
-        return uint256(labelHash);
+
+        return tokenId;
     }
 
      /**
