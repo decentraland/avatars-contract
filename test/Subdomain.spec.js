@@ -1572,22 +1572,15 @@ describe('DCL Names V2', function() {
           subdomain1WithLocale
         )
         expect(tokenId).to.eq.BN(web3.utils.toBN(subdomain1LabelHash))
+
+        const sameTokenId = await dclRegistrarContract.getTokenId(subdomain1)
+
+        expect(tokenId).to.eq.BN(sameTokenId)
       })
 
       it('reverts when trying to get a token id for a non-existing subdomain', async function() {
         await assertRevert(
           dclRegistrarContract.getTokenId(subdomain1WithLocale),
-          'The subdomain is not registered'
-        )
-
-        await dclRegistrarContract.register(
-          subdomain1WithLocale,
-          user,
-          fromUserController
-        )
-
-        await assertRevert(
-          dclRegistrarContract.getTokenId(subdomain1),
           'The subdomain is not registered'
         )
       })
@@ -1639,22 +1632,14 @@ describe('DCL Names V2', function() {
           subdomain1WithLocale
         )
         expect(owner).to.be.equal(user)
+
+        const sameOwner = await dclRegistrarContract.getOwnerOf(subdomain1)
+        expect(owner).to.be.equal(sameOwner)
       })
 
       it('reverts when trying to get a token id for a non-existing subdomain', async function() {
         await assertRevert(
           dclRegistrarContract.getOwnerOf(subdomain1WithLocale),
-          'The subdomain is not registered'
-        )
-
-        await dclRegistrarContract.register(
-          subdomain1WithLocale,
-          user,
-          fromUserController
-        )
-
-        await assertRevert(
-          dclRegistrarContract.getOwnerOf(subdomain1),
           'The subdomain is not registered'
         )
       })
