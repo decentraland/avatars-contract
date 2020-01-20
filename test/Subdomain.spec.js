@@ -1019,6 +1019,18 @@ describe('DCL Names V2', function() {
         expect(tokenURI).to.be.equal(`${BASE_URI}${subdomain2}`)
       })
 
+      it('should return the token URI at lowercase for uppercase', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1WithLocale,
+          user,
+          fromUserController
+        )
+
+        let tokenURI = await dclRegistrarContract.tokenURI(subdomain1LabelHash)
+        expect(tokenURI).to.be.equal(`${BASE_URI}${subdomain1}`)
+      })
+
       it('should return an empty string if base URI is not set', async function() {
         await dclRegistrarContract.addController(userController)
         await dclRegistrarContract.register(

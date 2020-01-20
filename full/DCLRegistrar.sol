@@ -1656,7 +1656,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
         }
 
         require(_exists(_tokenId), "ERC721Metadata: received a URI query for a nonexistent token");
-        return string(abi.encodePacked(baseURI, subdomains[bytes32(_tokenId)]));
+        return string(abi.encodePacked(baseURI, _toLowerCase(subdomains[bytes32(_tokenId)])));
     }
 
     /**
