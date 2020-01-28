@@ -1656,6 +1656,132 @@ describe('DCL Names V2', function() {
         )
       })
     })
+
+    describe('setResolver', function() {
+      it('should set the resolver', async function() {
+        const { logs } = await dclRegistrarContract.setResolver(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('NewResolver')
+        expect(logs[0].args.node).to.be.equal(dclDomainHash)
+        expect(logs[0].args.resolver).to.be.equal(
+          publicResolverContract.address
+        )
+
+        expect(logs[1].event).to.be.equal('ResolverUpdated')
+        expect(logs[1].args._oldResolver).to.be.equal(ZERO_ADDRESS)
+        expect(logs[1].args._newResolver).to.be.equal(
+          publicResolverContract.address
+        )
+      })
+
+      it('reverts to update the resolver by an unauthorized user', async function() {
+        await assertRevert(
+          dclRegistrarContract.setResolver(
+            publicResolverContract.address,
+            fromHacker
+          ),
+          'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts to update the resolver by an invalid address', async function() {
+        await assertRevert(
+          dclRegistrarContract.setResolver(
+            ensRegistryContract.address,
+            fromDeployer
+          ),
+          'Invalid address'
+        )
+
+        await assertRevert(
+          dclRegistrarContract.setResolver(
+            baseRegistrarContract.address,
+            fromDeployer
+          ),
+          'Invalid address'
+        )
+
+        await assertRevert(
+          dclRegistrarContract.setResolver(
+            dclRegistrarContract.address,
+            fromDeployer
+          ),
+          'Invalid address'
+        )
+      })
+    })
+
+    describe('forwardToResolver', function() {
+      it('should forward a call the resolver', async function() {
+        await dclRegistrarContract.setResolver(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        // setAddr(bytes32,address)
+        const data = `0xd5fa2b00${dclDomainHash.replace(
+          '0x',
+          ''
+        )}${user.replace('0x', '000000000000000000000000')}`
+
+        const { logs } = await dclRegistrarContract.forwardToResolver(
+          data,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('AddressChanged')
+        expect(logs[0].args.node).to.be.equal(dclDomainHash)
+        expect(logs[0].args.coinType).to.eq.BN(60)
+        expect(logs[0].args.newAddress.toLowerCase()).to.be.equal(
+          user.toLowerCase()
+        )
+
+        expect(logs[1].event).to.be.equal('CallForwarwedToResolver')
+        expect(logs[1].args._data).to.be.equal(data.toLowerCase())
+        expect(logs[1].args._success).to.be.equal(true)
+      })
+
+      it('should emit res as false if call failed', async function() {
+        await dclRegistrarContract.setResolver(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        // setAddr(bytes32,address)
+        const data = `0xd5fa2b00${ethTopdomainHash.replace(
+          '0x',
+          ''
+        )}${user.replace('0x', '000000000000000000000000')}`
+
+        const { logs } = await dclRegistrarContract.forwardToResolver(
+          data,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+
+        expect(logs[0].event).to.be.equal('CallForwarwedToResolver')
+        expect(logs[0].args._data).to.be.equal(data.toLowerCase())
+        expect(logs[0].args._success).to.be.equal(false)
+      })
+
+      it('reverts forward a call the resolver', async function() {
+        await assertRevert(
+          dclRegistrarContract.forwardToResolver(
+            publicResolverContract.address,
+            fromHacker
+          ),
+          'Ownable: caller is not the owner'
+        )
+      })
+    })
   })
 
   describe('DCLController', function() {

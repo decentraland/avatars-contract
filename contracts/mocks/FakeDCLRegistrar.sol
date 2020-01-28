@@ -9,6 +9,8 @@ contract FakeDCLRegistrar is DCLRegistrar {
     event Transfer(bytes32 indexed node, address owner);
     event NewResolver(bytes32 indexed node, address resolver);
     event NewTTL(bytes32 indexed node, uint64 ttl);
+    // Resolver
+    event AddressChanged(bytes32 indexed node, uint coinType, bytes newAddress);
 
     constructor(
         IENSRegistry _registry,

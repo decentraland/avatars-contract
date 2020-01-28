@@ -73,6 +73,12 @@ contract DCLRegistrar is ERC721Full, Ownable {
     // Emitted when base URI is was changed
     event BaseURI(string _oldBaseURI, string _newBaseURI);
 
+    // Emit when the resolver is set to the owned domain
+    event ResolverUpdated(address indexed _oldResolver, address indexed _newResolver);
+
+    // Emit when a call is forwarred to the resolver
+    event CallForwarwedToResolver(bytes _data, bool _success, bytes res);
+
 
     /**
 	 * @dev Check if the sender is an authorized controller
@@ -332,6 +338,33 @@ contract DCLRegistrar is ERC721Full, Ownable {
     function transferDomainOwnership(address _owner, uint256 _tokenId) public onlyOwner {
         base.transferFrom(address(this), _owner, _tokenId);
         emit DomainTransferred(_owner, _tokenId);
+    }
+
+    /**
+	 * @dev Update owned domain resolver
+	 * @param _resolver - new resolver
+	 */
+    function setResolver(address _resolver) public onlyOwner {
+        address resolver = registry.resolver(domainNameHash);
+
+        require(
+            _resolver != resolver && _resolver != address(base) && _resolver != address(registry) && _resolver != address(this),
+            "Invalid address"
+        );
+
+        registry.setResolver(domainNameHash, _resolver);
+
+        emit ResolverUpdated(resolver, _resolver);
+    }
+
+    /**
+	 * @dev Forward calls to resolver
+	 * @param _data - data to be send in the call
+	 */
+    function forwardToResolver(bytes memory _data) public onlyOwner {
+        address resolver = registry.resolver(domainNameHash);
+        (bool success, bytes memory res) = resolver.call(_data);
+        emit CallForwarwedToResolver(_data, success, res);
     }
 
     /**
