@@ -77,7 +77,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
     event ResolverUpdated(address indexed _oldResolver, address indexed _newResolver);
 
     // Emit when a call is forwarred to the resolver
-    event CallForwarwedToResolver(bytes _data, bool _success, bytes res);
+    event CallForwarwedToResolver(address indexed _resolver, bytes _data, bytes res);
 
 
     /**
@@ -173,7 +173,7 @@ contract DCLRegistrar is ERC721Full, Ownable {
         address _beneficiary
     ) external onlyController isMigrated {
         // Make sure this contract owns the domain
-        require(registry.owner(domainNameHash) == address(this), "The contract does not own the domain");
+        _checkOwnerOfDomain();
         // Create labelhash for the subdomain
         bytes32 subdomainLabelHash = keccak256(abi.encodePacked(_toLowerCase(_subdomain)));
         // Make sure it is free
@@ -347,10 +347,10 @@ contract DCLRegistrar is ERC721Full, Ownable {
     function setResolver(address _resolver) public onlyOwner {
         address resolver = registry.resolver(domainNameHash);
 
-        require(
-            _resolver != resolver && _resolver != address(base) && _resolver != address(registry) && _resolver != address(this),
-            "Invalid address"
-        );
+        require(_resolver.isContract(), "New resolver should be a contract");
+        require(_resolver != resolver, "New resolver should be different from old");
+
+        _checkNotAllowedAddresses(_resolver);
 
         registry.setResolver(domainNameHash, _resolver);
 
@@ -363,8 +363,17 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 */
     function forwardToResolver(bytes memory _data) public onlyOwner {
         address resolver = registry.resolver(domainNameHash);
+
+        _checkNotAllowedAddresses(resolver);
+
         (bool success, bytes memory res) = resolver.call(_data);
-        emit CallForwarwedToResolver(_data, success, res);
+
+        require(success, "Call failed");
+
+        // Make sure this contract is still the owner of the domain
+        _checkOwnerOfDomain();
+
+        emit CallForwarwedToResolver(resolver, _data, res);
     }
 
     /**
@@ -432,6 +441,22 @@ contract DCLRegistrar is ERC721Full, Ownable {
     function migrationFinished() external onlyOwner isNotMigrated {
         migrated = true;
         emit MigrationFinished();
+    }
+
+
+    function _checkOwnerOfDomain() internal view  {
+        require(
+            registry.owner(domainNameHash) == address(this) &&
+            base.ownerOf(uint256(keccak256(abi.encodePacked(domain)))) == address(this),
+            "The contract does not own the domain"
+        );
+    }
+
+    function _checkNotAllowedAddresses(address _address) internal view {
+        require(
+            _address != address(base) && _address != address(registry) && _address != address(this),
+            "Invalid address"
+        );
     }
 
     /**

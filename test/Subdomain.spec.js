@@ -1679,7 +1679,14 @@ describe('DCL Names V2', function() {
         )
       })
 
-      it('reverts to update the resolver by an unauthorized user', async function() {
+      it('reverts when trying to update the resolver with a non-contract addrress', async function() {
+        await assertRevert(
+          dclRegistrarContract.setResolver(user, fromDeployer),
+          'New resolver should be a contract'
+        )
+      })
+
+      it('reverts when trying to update the resolver by an unauthorized user', async function() {
         await assertRevert(
           dclRegistrarContract.setResolver(
             publicResolverContract.address,
@@ -1689,7 +1696,22 @@ describe('DCL Names V2', function() {
         )
       })
 
-      it('reverts to update the resolver by an invalid address', async function() {
+      it('reverts when trying to update the resolver with the same address', async function() {
+        await dclRegistrarContract.setResolver(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        await assertRevert(
+          dclRegistrarContract.setResolver(
+            publicResolverContract.address,
+            fromDeployer
+          ),
+          'New resolver should be different from old'
+        )
+      })
+
+      it('reverts when trying to update the resolver with an invalid address', async function() {
         await assertRevert(
           dclRegistrarContract.setResolver(
             ensRegistryContract.address,
@@ -1718,6 +1740,9 @@ describe('DCL Names V2', function() {
 
     describe('forwardToResolver', function() {
       it('should forward a call the resolver', async function() {
+        let target = await publicResolverContract.addr(dclDomainHash)
+        expect(target).to.be.equal(ZERO_ADDRESS)
+
         await dclRegistrarContract.setResolver(
           publicResolverContract.address,
           fromDeployer
@@ -1744,11 +1769,16 @@ describe('DCL Names V2', function() {
         )
 
         expect(logs[1].event).to.be.equal('CallForwarwedToResolver')
+        expect(logs[1].args._resolver).to.be.equal(
+          publicResolverContract.address
+        )
         expect(logs[1].args._data).to.be.equal(data.toLowerCase())
-        expect(logs[1].args._success).to.be.equal(true)
+
+        target = await publicResolverContract.addr(dclDomainHash)
+        expect(target).to.be.equal(user)
       })
 
-      it('should emit res as false if call failed', async function() {
+      it('reverts if if call failed', async function() {
         await dclRegistrarContract.setResolver(
           publicResolverContract.address,
           fromDeployer
@@ -1760,25 +1790,36 @@ describe('DCL Names V2', function() {
           ''
         )}${user.replace('0x', '000000000000000000000000')}`
 
-        const { logs } = await dclRegistrarContract.forwardToResolver(
-          data,
-          fromDeployer
+        await assertRevert(
+          dclRegistrarContract.forwardToResolver(data, fromDeployer),
+          'Call failed'
         )
-
-        expect(logs.length).to.be.equal(1)
-
-        expect(logs[0].event).to.be.equal('CallForwarwedToResolver')
-        expect(logs[0].args._data).to.be.equal(data.toLowerCase())
-        expect(logs[0].args._success).to.be.equal(false)
       })
 
-      it('reverts forward a call the resolver', async function() {
+      it('reverts when trying to forward a call by an unathorized user', async function() {
         await assertRevert(
           dclRegistrarContract.forwardToResolver(
             publicResolverContract.address,
             fromHacker
           ),
           'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts when trying to forward to an invalid address', async function() {
+        await dclRegistrarContract.setResolver(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        await dclRegistrarContract.updateBase(
+          publicResolverContract.address,
+          fromDeployer
+        )
+
+        await assertRevert(
+          dclRegistrarContract.forwardToResolver(ZERO_32_BYTES, fromDeployer),
+          'Invalid address'
         )
       })
     })
