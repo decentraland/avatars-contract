@@ -32,4 +32,10 @@ contract IBaseRegistrar {
      */
     function transferFrom(address from, address to, uint256 id) public;
 
+    /**
+     * @dev Gets the owner of the specified token ID
+     * @param tokenId uint256 ID of the token to query the owner of
+     * @return owner address currently marked as the owner of the given token ID
+     */
+    function ownerOf(uint256 tokenId) public view returns (address);
 }

@@ -8,3 +8,4 @@ cache
 .zos.session
 coverage
 coverage.json
+.vscode
