@@ -4,11 +4,11 @@ import assertRevert from './helpers/assertRevert'
 const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
 
-const IENSRegistry = artifacts.require('IENSRegistry')
 const DCLRegistrar = artifacts.require('FakeDCLRegistrar')
 const DCLController = artifacts.require('FakeDCLController')
 const FakeENSRegistryFactory = artifacts.require('FakeENSRegistryFactory')
-const ENSBaseRegistrar = artifacts.require('ENSBaseRegistrar')
+const ENSRegistry = artifacts.require('ENSRegistryWithFallback')
+const ENSBaseRegistrar = artifacts.require('BaseRegistrarImplementation')
 const ENSPublicResolver = artifacts.require('ENSPublicResolver')
 
 describe('DCL Names V2', function() {
@@ -122,14 +122,17 @@ describe('DCL Names V2', function() {
     const ensRegistryAddress = await fakeENSRegistryFactory.ensRegistryAddress(
       creationParams
     )
-    ensRegistryContract = await IENSRegistry.at(ensRegistryAddress)
+
+    // Set up ENS Registry
+    ensRegistryContract = await ENSRegistry.new(
+      ensRegistryAddress,
+      creationParams
+    )
 
     // Deploy base registrar
     baseRegistrarContract = await ENSBaseRegistrar.new(
-      ensRegistryAddress,
-      ensRegistryAddress,
+      ensRegistryContract.address,
       ethTopdomainHash,
-      Date.now() * 2, // to pass transnfer lock period
       creationParams
     )
 
@@ -152,7 +155,7 @@ describe('DCL Names V2', function() {
     )
     // Deploy public resolver
     publicResolverContract = await ENSPublicResolver.new(
-      ensRegistryAddress,
+      ensRegistryContract.address,
       creationParams
     )
 

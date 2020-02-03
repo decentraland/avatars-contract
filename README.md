@@ -4,6 +4,15 @@
 
 ### Mainnet
 
+## [New 29/01/2020](https://medium.com/the-ethereum-name-service/ens-registry-migration-bug-fix-new-features-64379193a5a)
+
+- ENS Registry = `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`
+- ENS Public Resolver = `0xDaaF96c344f63131acadD0Ea35170E7892d3dfBA`
+- ENS Base Registrar = `0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85`
+- ENS Registrar Controller = _`undefined yet after migration has finished`_
+
+## Old
+
 - ENS Registry = `0x314159265dd8dbb310642f98f50c066173c1259b`
 - ENS Public Resolver = `0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8`
 - ENS Base Registrar = `0xfac7bea255a6990f749363002136af6556b31e04`
