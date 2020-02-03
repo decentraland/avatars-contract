@@ -208,6 +208,22 @@ contract DCLRegistrar is ERC721Full, Ownable {
 	 * @dev Re-claim the ownership of a subdomain (e.g. "nacho").
      * @notice After a subdomain is transferred by this contract, the owner in the ENS registry contract
      * is still the old owner. Therefore, the owner should call `reclaim` to update the owner of the subdomain.
+     * It is also useful to recreate the subdomains in case an ENS migration.
+	 * @param _tokenId - erc721 token id which represents the node (subdomain).
+     */
+    function reclaim(uint256 _tokenId) public onlyController {
+        address owner = ownerOf(_tokenId);
+
+        registry.setSubnodeOwner(domainNameHash, bytes32(_tokenId), ownerOf(_tokenId));
+
+        emit Reclaimed(msg.sender, owner, _tokenId);
+    }
+
+    /**
+	 * @dev Re-claim the ownership of a subdomain (e.g. "nacho").
+     * @notice After a subdomain is transferred by this contract, the owner in the ENS registry contract
+     * is still the old owner. Therefore, the owner should call `reclaim` to update the owner of the subdomain.
+     * It is also useful to recreate the subdomains in case an ENS migration.
 	 * @param _tokenId - erc721 token id which represents the node (subdomain).
      * @param _owner - new owner.
      */

@@ -807,7 +807,97 @@ describe('DCL Names V2', function() {
       })
     })
 
-    describe('reclaim', function() {
+    describe('reclaim :: by controller', function() {
+      beforeEach(async () => {
+        await dclRegistrarContract.migrationFinished()
+      })
+
+      it('should reclaim an owned name', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        const { logs } = await dclRegistrarContract.reclaimByController(
+          subdomain1LabelHash,
+          fromUserController
+        )
+
+        expect(logs.length).to.be.equal(2)
+
+        expect(logs[0].event).to.be.equal('NewOwner')
+        expect(logs[0].args.node).to.be.equal(dclDomainHash)
+        expect(logs[0].args.label).to.be.equal(subdomain1LabelHash)
+        expect(logs[0].args.owner).to.be.equal(user)
+
+        expect(logs[1].event).to.be.equal('Reclaimed')
+        expect(logs[1].args._caller).to.be.equal(userController)
+        expect(logs[1].args._owner).to.be.equal(user)
+        expect(logs[1].args._tokenId).to.eq.BN(
+          web3.utils.toBN(subdomain1LabelHash)
+        )
+
+        const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+        expect(subdomainOwner).to.be.equal(user)
+      })
+
+      it('should reclaim a name previously transferred', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        await dclRegistrarContract.transferFrom(
+          user,
+          anotherUser,
+          subdomain1LabelHash,
+          fromUser
+        )
+
+        await dclRegistrarContract.reclaimByController(
+          subdomain1LabelHash,
+          fromUserController
+        )
+
+        const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
+        expect(subdomainOwner).to.be.equal(anotherUser)
+      })
+
+      it('reverts when trying to reclaim by an unauthorized user', async function() {
+        await dclRegistrarContract.addController(userController)
+        await dclRegistrarContract.register(
+          subdomain1,
+          user,
+          fromUserController
+        )
+
+        await assertRevert(
+          dclRegistrarContract.reclaimByController(
+            subdomain1LabelHash,
+            fromHacker
+          ),
+          'Only a controller can call this method'
+        )
+      })
+
+      it('reverts when trying to reclaim an non-exist name', async function() {
+        await dclRegistrarContract.addController(userController)
+
+        await assertRevert(
+          dclRegistrarContract.reclaimByController(
+            subdomain1LabelHash,
+            fromUserController
+          ),
+          'ERC721: owner query for nonexistent token'
+        )
+      })
+    })
+
+    describe('reclaim :: by owner', function() {
       beforeEach(async () => {
         await dclRegistrarContract.migrationFinished()
       })
