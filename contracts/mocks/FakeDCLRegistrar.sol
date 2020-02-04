@@ -20,6 +20,10 @@ contract FakeDCLRegistrar is DCLRegistrar {
         string memory _baseURI
     ) public DCLRegistrar(_registry, _base, _topdomain, _domain, _baseURI) {}
 
+    function reclaimByController(uint256 _tokenId) public {
+        super.reclaim(_tokenId);
+    }
+
     function bytes32ToString(bytes32 _str) public pure returns (string memory) {
         return _bytes32ToString(_str);
     }
