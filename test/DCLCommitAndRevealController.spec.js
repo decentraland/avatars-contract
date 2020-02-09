@@ -773,6 +773,91 @@ describe('DCLCommitAndRevealController', function() {
         dclControllerContract.register(name, user, salt, fromUser),
         'Invalid Character'
       )
+
+      // Special characters
+      // With ascii 0x1f (US)
+      let tx = {
+        from: user,
+        to: dclControllerContract.address,
+        data: `0xf34b95b30000000000000000000000000000000000000000000000000000000000000060000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}${salt.replace(
+          '0x',
+          ''
+        )}00000000000000000000000000000000000000000000000000000000000000031f60600000000000000000000000000000000000000000000000000000000000`
+      }
+      hash = web3.utils.soliditySha3(
+        web3.eth.abi.encodeParameters(
+          ['address', 'address', 'string', 'address', 'bytes32'],
+          [
+            dclControllerContract.address,
+            user,
+            web3.utils.hexToAscii('0x1f6060'),
+            user,
+            salt
+          ]
+        )
+      )
+      await dclControllerContract.commitName(hash, fromUser)
+      await increaseTime(duration.seconds(TIME_UNTIL_REVEAL))
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
+
+      // With ascii 0x00 (NULL)
+      tx = {
+        from: user,
+        to: dclControllerContract.address,
+        data: `0xf34b95b30000000000000000000000000000000000000000000000000000000000000060000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}${salt.replace(
+          '0x',
+          ''
+        )}00000000000000000000000000000000000000000000000000000000000000030060600000000000000000000000000000000000000000000000000000000000`
+      }
+      hash = web3.utils.soliditySha3(
+        web3.eth.abi.encodeParameters(
+          ['address', 'address', 'string', 'address', 'bytes32'],
+          [
+            dclControllerContract.address,
+            user,
+            web3.utils.hexToAscii('0x006060'),
+            user,
+            salt
+          ]
+        )
+      )
+      await dclControllerContract.commitName(hash, fromUser)
+      await increaseTime(duration.seconds(TIME_UNTIL_REVEAL))
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
+
+      // With ascii 0x08 (BACKSPACE)
+      tx = {
+        from: user,
+        to: dclControllerContract.address,
+        data: `0xf34b95b30000000000000000000000000000000000000000000000000000000000000060000000000000000000000000${user.replace(
+          '0x',
+          ''
+        )}${salt.replace(
+          '0x',
+          ''
+        )}00000000000000000000000000000000000000000000000000000000000000030860600000000000000000000000000000000000000000000000000000000000`
+      }
+      hash = web3.utils.soliditySha3(
+        web3.eth.abi.encodeParameters(
+          ['address', 'address', 'string', 'address', 'bytes32'],
+          [
+            dclControllerContract.address,
+            user,
+            web3.utils.hexToAscii('0x086060'),
+            user,
+            salt
+          ]
+        )
+      )
+      await dclControllerContract.commitName(hash, fromUser)
+      await increaseTime(duration.seconds(TIME_UNTIL_REVEAL))
+      await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
     })
 
     it('reverts when username is lower than 2 and greather than 15 bytes', async function() {
