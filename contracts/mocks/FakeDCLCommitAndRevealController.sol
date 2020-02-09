@@ -1,9 +1,8 @@
 pragma solidity ^0.5.15;
 
-import "../ens/DCLController.sol";
+import "../ens/DCLCommitAndRevealController.sol";
 
-
-contract FakeDCLController is DCLController {
+contract FakeDCLCommitAndRevealController is DCLCommitAndRevealController {
     // ERC20
     event Burn(address indexed burner, uint256 value);
     // ERC721
@@ -25,6 +24,6 @@ contract FakeDCLController is DCLController {
     constructor(
         IERC20Token _acceptedToken,
         IDCLRegistrar _registrar
-    ) public DCLController(_acceptedToken, _registrar) {}
+    ) public DCLCommitAndRevealController(_acceptedToken, _registrar) {}
 
 }

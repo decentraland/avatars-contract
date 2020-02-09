@@ -2,7 +2,7 @@
 
 AVATARS=AvatarNameRegistry.sol
 DCLREGISTRAR=DCLRegistrar.sol
-DCLCONTROLLER=DCLController.sol
+DCLCONTROLLER=DCLStandardController.sol
 
 
 OUTPUT=full

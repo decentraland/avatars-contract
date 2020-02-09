@@ -1,60 +1,34 @@
-import { Mana, ADDRESS_INDEXES } from 'decentraland-contract-plugins'
+import { ADDRESS_INDEXES } from 'decentraland-contract-plugins'
 import assertRevert from './helpers/assertRevert'
+import {
+  TOP_DOMAIN,
+  DOMAIN,
+  ZERO_ADDRESS,
+  ZERO_32_BYTES,
+  BASE_URI,
+  setupContracts,
+  dclLabelHash,
+  ethTopdomainHash,
+  dclDomainHash,
+  subdomain1,
+  subdomain1WithLocale,
+  subdomain1LabelHash,
+  subdomain1Hash,
+  subdomain2,
+  subdomain2LabelHash
+} from './helpers/setupContracts'
 
 const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
 
 const DCLRegistrar = artifacts.require('FakeDCLRegistrar')
-const DCLController = artifacts.require('FakeDCLController')
-const FakeENSRegistryFactory = artifacts.require('FakeENSRegistryFactory')
-const ENSRegistry = artifacts.require('ENSRegistryWithFallback')
-const ENSBaseRegistrar = artifacts.require('BaseRegistrarImplementation')
-const ENSPublicResolver = artifacts.require('ENSPublicResolver')
 
-describe('DCL Names V2', function() {
+describe('DCL Names v2', function() {
   this.timeout(100000)
 
   // globals
-  const BASE_URI = 'https://decentraland-api.com/v1/'
   const ONE_DAY = 60 * 60 * 24
   const CREATED_DATE = Math.round(Date.now() / 1000 - ONE_DAY)
-  const TOP_DOMAIN = 'eth'
-  const DOMAIN = 'dcl'
-  const PRICE = new BN('100000000000000000000')
-  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-  const ZERO_32_BYTES =
-    '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const MAX_GAS_PRICE = '20000000000'
-
-  const ethLabelHash = web3.utils.sha3(TOP_DOMAIN)
-  const dclLabelHash = web3.utils.sha3(DOMAIN)
-
-  const ethTopdomainHash = web3.utils.sha3(
-    web3.eth.abi.encodeParameters(
-      ['bytes32', 'bytes32'],
-      [ZERO_32_BYTES, ethLabelHash]
-    )
-  )
-
-  const dclDomainHash = web3.utils.sha3(
-    web3.eth.abi.encodeParameters(
-      ['bytes32', 'bytes32'],
-      [ethTopdomainHash, dclLabelHash]
-    )
-  )
-
-  const subdomain1 = 'nacho'
-  const subdomain1WithLocale = 'Nacho'
-  const subdomain1LabelHash = web3.utils.sha3(subdomain1)
-  const subdomain1Hash = web3.utils.sha3(
-    web3.eth.abi.encodeParameters(
-      ['bytes32', 'bytes32'],
-      [dclDomainHash, subdomain1LabelHash]
-    )
-  )
-
-  const subdomain2 = 'dani'
-  const subdomain2LabelHash = web3.utils.sha3(subdomain2)
 
   const subdomain3 = 'nacho1'
   const subdomain3LabelHash = web3.utils.sha3(subdomain3)
@@ -81,7 +55,6 @@ describe('DCL Names V2', function() {
   let fromDeployer
 
   // Contracts
-  let manaContract
   let ensRegistryContract
   let baseRegistrarContract
   let publicResolverContract
@@ -108,85 +81,17 @@ describe('DCL Names V2', function() {
       gasPrice: 21e9
     }
 
-    // Set up MANA Contract
-    const mana = new Mana({ accounts, artifacts: global })
-    await mana.deploy({ txParams: creationParams })
-    manaContract = mana.getContract()
-
-    // Set up ENS Registry
-    const fakeENSRegistryFactory = await FakeENSRegistryFactory.new(
-      creationParams
-    )
-    await fakeENSRegistryFactory.createENSRegistry()
-    // Deploy code by bytecode
-    const ensRegistryAddress = await fakeENSRegistryFactory.ensRegistryAddress(
-      creationParams
+    const contracts = await setupContracts(
+      accounts,
+      creationParams,
+      DCLRegistrar
     )
 
-    // Set up ENS Registry
-    ensRegistryContract = await ENSRegistry.new(
-      ensRegistryAddress,
-      creationParams
-    )
-
-    // Deploy base registrar
-    baseRegistrarContract = await ENSBaseRegistrar.new(
-      ensRegistryContract.address,
-      ethTopdomainHash,
-      creationParams
-    )
-
-    // Register eth top domain
-    await ensRegistryContract.setSubnodeOwner(
-      ZERO_32_BYTES,
-      ethLabelHash,
-      baseRegistrarContract.address,
-      fromDeployer
-    )
-
-    // Add controller to base
-    await baseRegistrarContract.addController(deployer, fromDeployer)
-    // Register dcl
-    await baseRegistrarContract.register(
-      dclLabelHash,
-      deployer,
-      60 * 60 * 24 * 30,
-      fromDeployer
-    )
-    // Deploy public resolver
-    publicResolverContract = await ENSPublicResolver.new(
-      ensRegistryContract.address,
-      creationParams
-    )
-
-    // Deploy dcl subdomain contract
-    dclRegistrarContract = await DCLRegistrar.new(
-      ensRegistryContract.address,
-      baseRegistrarContract.address,
-      TOP_DOMAIN,
-      DOMAIN,
-      BASE_URI,
-      creationParams
-    )
-
-    // Deploy dcl controller contract
-    dclControllerContract = await DCLController.new(
-      manaContract.address,
-      dclRegistrarContract.address,
-      creationParams
-    )
-
-    await dclRegistrarContract.addController(dclControllerContract.address)
-
-    // Transfer DCL domain
-    await baseRegistrarContract.safeTransferFrom(
-      deployer,
-      dclRegistrarContract.address,
-      dclLabelHash,
-      fromDeployer
-    )
-
-    await mana.authorize(dclControllerContract.address)
+    ensRegistryContract = contracts.ensRegistryContract
+    baseRegistrarContract = contracts.baseRegistrarContract
+    publicResolverContract = contracts.publicResolverContract
+    dclRegistrarContract = contracts.dclRegistrarContract
+    dclControllerContract = contracts.dclControllerContract
   })
 
   describe('DCLRegistrar', function() {
@@ -1913,410 +1818,6 @@ describe('DCL Names V2', function() {
         await assertRevert(
           dclRegistrarContract.forwardToResolver(ZERO_32_BYTES, fromDeployer),
           'Invalid address'
-        )
-      })
-    })
-  })
-
-  describe('DCLController', function() {
-    beforeEach(async () => {
-      await dclRegistrarContract.migrationFinished()
-    })
-
-    describe('Constructor', function() {
-      it('should be depoyed with valid arguments', async function() {
-        const contract = await DCLController.new(
-          manaContract.address,
-          dclRegistrarContract.address,
-          creationParams
-        )
-
-        const acceptedToken = await contract.acceptedToken()
-        expect(acceptedToken).to.be.equal(manaContract.address)
-
-        const registrar = await contract.registrar()
-        expect(registrar).to.be.equal(dclRegistrarContract.address)
-
-        const price = await dclControllerContract.PRICE()
-        expect(price).to.eq.BN(PRICE)
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-      })
-
-      it('reverts if acceptedToken is not a contract', async function() {
-        await assertRevert(
-          DCLController.new(user, dclRegistrarContract.address, creationParams),
-          'Accepted token should be a contract'
-        )
-      })
-
-      it('reverts if registrar is not a contract', async function() {
-        await assertRevert(
-          DCLController.new(manaContract.address, user, creationParams),
-          'Registrar should be a contract'
-        )
-      })
-    })
-
-    describe('Register', function() {
-      it('should register a name', async function() {
-        const { logs } = await dclControllerContract.register(
-          subdomain1,
-          user,
-          { ...fromUser, gasPrice: MAX_GAS_PRICE }
-        )
-
-        expect(logs.length).to.be.equal(5)
-
-        const newOwnerLog = logs[0]
-        expect(newOwnerLog.event).to.be.equal('NewOwner')
-        expect(newOwnerLog.args.node).to.be.equal(dclDomainHash)
-        expect(newOwnerLog.args.label).to.be.equal(subdomain1LabelHash)
-        expect(newOwnerLog.args.owner).to.be.equal(user)
-
-        const transferLog = logs[1]
-        expect(transferLog.event).to.be.equal('Transfer')
-        expect(transferLog.args.from).to.be.equal(ZERO_ADDRESS)
-        expect(transferLog.args.to).to.be.equal(user)
-        expect(transferLog.args.tokenId).to.eq.BN(
-          web3.utils.toBN(subdomain1LabelHash)
-        )
-
-        const nameRegisteredLog = logs[2]
-        expect(nameRegisteredLog.event).to.be.equal('NameRegistered')
-        expect(nameRegisteredLog.args._caller).to.be.equal(
-          dclControllerContract.address
-        )
-        expect(nameRegisteredLog.args._beneficiary).to.be.equal(user)
-        expect(nameRegisteredLog.args._labelHash).to.be.equal(
-          subdomain1LabelHash
-        )
-        expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
-
-        const burnLog = logs[3]
-        expect(burnLog.event).to.be.equal('Burn')
-        expect(burnLog.args.burner).to.be.equal(dclControllerContract.address)
-        expect(burnLog.args.value).to.eq.BN(PRICE)
-
-        const nameBoughtLog = logs[4]
-        expect(nameBoughtLog.event).to.be.equal('NameBought')
-        expect(nameBoughtLog.args._caller).to.be.equal(user)
-        expect(nameBoughtLog.args._beneficiary).to.be.equal(user)
-        expect(nameBoughtLog.args._price).to.eq.BN(PRICE)
-        expect(nameBoughtLog.args._name).to.be.equal(subdomain1)
-
-        const balanceOfUser = await dclRegistrarContract.balanceOf(user)
-        expect(balanceOfUser).to.eq.BN(1)
-
-        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
-        const subdomain = await dclRegistrarContract.subdomains(tokenId)
-
-        expect(subdomain).to.be.equal(subdomain1)
-
-        const subdomainOwner = await ensRegistryContract.owner(subdomain1Hash)
-        expect(subdomainOwner).to.be.equal(user)
-
-        const currentResolver = await ensRegistryContract.resolver(
-          subdomain1Hash
-        )
-        expect(currentResolver).to.be.equal(ZERO_ADDRESS)
-      })
-
-      it('should register a name with a-z', async function() {
-        let name = 'qwertyuiopasdfg'
-        await dclControllerContract.register(name, user, fromUser)
-
-        let tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
-        let subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-
-        name = 'hjklzxcvbnm'
-        await dclControllerContract.register(name, user, fromUser)
-        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 1)
-        subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-
-        name = 'abc'
-        await dclControllerContract.register(name, user, fromUser)
-        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 2)
-        subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-      })
-
-      it('should register a name with A-Z', async function() {
-        let name = 'QWERTYUIOPASDFG'
-        await dclControllerContract.register(name, user, fromUser)
-
-        let tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
-        let subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-
-        name = 'HJKLZXCVBNM'
-        await dclControllerContract.register(name, user, fromUser)
-        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 1)
-        subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-
-        name = 'ABC'
-        await dclControllerContract.register(name, user, fromUser)
-        tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 2)
-        subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-      })
-
-      it('should register a name with 0-9', async function() {
-        const name = '123456789'
-        await dclControllerContract.register(name, user, fromUser)
-        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
-        const subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-      })
-
-      it('should register a name with a-A and 0-9', async function() {
-        const name = '123456789aBcd'
-        await dclControllerContract.register(name, user, fromUser)
-        const tokenId = await dclRegistrarContract.tokenOfOwnerByIndex(user, 0)
-        const subdomain = await dclRegistrarContract.subdomains(tokenId)
-        expect(subdomain).to.be.equal(name)
-      })
-
-      it('reverts when trying to register a name with a gas price higher than max gas price', async function() {
-        await assertRevert(
-          dclControllerContract.register(subdomain1, user, {
-            ...fromUser,
-            gasPrice: MAX_GAS_PRICE + 1
-          }),
-          'Maximum gas price allowed exceeded'
-        )
-      })
-
-      it('reverts when the name has invalid characters', async function() {
-        let name = 'the username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '_username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = 'úsername'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '^"}username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '👍username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '€username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        name = '𐍈username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x2F
-        name = ':username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x3A
-        name = '/username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x40
-        name = '@username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x5b
-        name = '[username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x60
-        name = '`username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Edge cases on ascii table 0x7B
-        name = '{username'
-        await assertRevert(
-          dclControllerContract.register(name, user, fromUser),
-          'Invalid Character'
-        )
-
-        // Special characters
-        // With ascii 0x1f (US)
-        let tx = {
-          from: userController,
-          to: dclControllerContract.address,
-          data: `0x1e59c5290000000000000000000000000000000000000000000000000000000000000040000000000000000000000000${user.replace(
-            '0x',
-            ''
-          )}00000000000000000000000000000000000000000000000000000000000000031f60600000000000000000000000000000000000000000000000000000000000`
-        }
-        await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
-
-        // With ascii 0x00 (NULL)
-        tx = {
-          from: userController,
-          to: dclControllerContract.address,
-          data: `0x1e59c5290000000000000000000000000000000000000000000000000000000000000040000000000000000000000000${user.replace(
-            '0x',
-            ''
-          )}00000000000000000000000000000000000000000000000000000000000000030060600000000000000000000000000000000000000000000000000000000000`
-        }
-        await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
-
-        // With ascii 0x08 (BACKSPACE)
-        tx = {
-          from: userController,
-          to: dclControllerContract.address,
-          data: `0x1e59c5290000000000000000000000000000000000000000000000000000000000000040000000000000000000000000${user.replace(
-            '0x',
-            ''
-          )}00000000000000000000000000000000000000000000000000000000000000030860600000000000000000000000000000000000000000000000000000000000`
-        }
-        await assertRevert(web3.eth.sendTransaction(tx), 'Invalid Character')
-      })
-
-      it('reverts when username is lower than 2 and greather than 15 bytes', async function() {
-        const bigUsername = 'abignameregistry'
-        await assertRevert(
-          dclControllerContract.register(bigUsername, user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
-        )
-      })
-
-      it('reverts when trying to register a name with a lenght < 3', async function() {
-        await assertRevert(
-          dclControllerContract.register('', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
-        )
-
-        await assertRevert(
-          dclControllerContract.register('a', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
-        )
-      })
-
-      it('reverts when trying to register a name with no balance', async function() {
-        const balance = await manaContract.balanceOf(user)
-        await manaContract.burn(balance, fromUser)
-        await assertRevert(
-          dclControllerContract.register(subdomain1, user, fromUser),
-          'Insufficient funds'
-        )
-      })
-
-      it('reverts when trying to register a name without approval', async function() {
-        await manaContract.approve(dclControllerContract.address, 0, fromUser)
-        await assertRevert(
-          dclControllerContract.register(subdomain1, user, fromUser),
-          'The contract is not authorized to use the accepted token on sender behalf'
-        )
-      })
-    })
-
-    describe('updateMaxGasPrice', function() {
-      it('should update the max gas price', async function() {
-        let maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-
-        const newMaxGasPrice = 1000000000
-        const { logs } = await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        expect(logs.length).to.be.equal(1)
-
-        const newOwnerLog = logs[0]
-        expect(newOwnerLog.event).to.be.equal('MaxGasPriceChanged')
-        expect(newOwnerLog.args._oldMaxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-        expect(newOwnerLog.args._newMaxGasPrice).to.eq.BN(newMaxGasPrice)
-
-        maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('should update the max gas price to 1 gwei', async function() {
-        const newMaxGasPrice = 1000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('should update the max gas price to 30 gwei', async function() {
-        const newMaxGasPrice = 30000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('reverts when updating the max gas price by an unauthorized user', async function() {
-        const newMaxGasPrice = 10000000000
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(newMaxGasPrice, fromHacker),
-          'Ownable: caller is not the owner'
-        )
-      })
-
-      it('reverts when updating the max gas price with lower than 1 gwei', async function() {
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(0, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
-        )
-
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(999999999, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
-        )
-      })
-
-      it('reverts when updating the max gas price with the same value', async function() {
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(MAX_GAS_PRICE, fromDeployer),
-          'Max gas price should be different'
         )
       })
     })

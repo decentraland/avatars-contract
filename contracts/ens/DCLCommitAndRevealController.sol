@@ -8,25 +8,33 @@ import "../interfaces/IENSRegistry.sol";
 import "../interfaces/IDCLRegistrar.sol";
 import "../interfaces/IERC20Token.sol";
 
-contract DCLController is Ownable {
+contract DCLCommitAndRevealController is Ownable {
     using Address for address;
 
     // Price of each name
     uint256 constant public PRICE = 100 ether;
+    uint256 constant public timeUntilReveal = 1 minutes;
+
+    struct Commit {
+        bytes32 commit;
+        uint256 blockNumber;
+        bool revealed;
+    }
 
     // Accepted ERC20 token
     IERC20Token public acceptedToken;
     // DCL Registrar
     IDCLRegistrar public registrar;
 
-    // Price of each name
-    uint256 public maxGasPrice = 20000000000; // 20 gwei
+    // Commits
+    mapping(bytes32 => uint256) public commits;
 
+    // Emitted when a hash is commited
+    event CommittedName(address indexed _caller, bytes32 indexed _hash);
+     // Emitted when a hash is revealed
+    event RevealedName(address indexed _caller, bytes32 indexed _hash);
     // Emitted when a name is bought
     event NameBought(address indexed _caller, address indexed _beneficiary, uint256 _price, string _name);
-
-    // Emitted when the max gas price is changed
-    event MaxGasPriceChanged(uint256 indexed _oldMaxGasPrice, uint256 indexed _newMaxGasPrice);
 
     /**
 	 * @dev Constructor of the contract
@@ -44,13 +52,36 @@ contract DCLController is Ownable {
     }
 
     /**
+    * @dev Commit a hash for a desire name
+    * @notice that the reveal should happen after the blocks defined on {blocksUntilReveal}
+    * @param _hash - bytes32 of the commit hash
+    */
+    function commitName(bytes32 _hash) public {
+        require(commits[_hash] == 0, "There is already a commit for the same hash");
+
+        commits[_hash] = block.timestamp;
+
+        emit CommittedName(msg.sender, _hash);
+    }
+
+    /**
 	 * @dev Register a name
      * @param _name - name to be registered
 	 * @param _beneficiary - owner of the name
+     * @param _salt - bytes32 for the salt
 	 */
-    function register(string memory _name, address _beneficiary) public {
-        // Check gas price
-        require(tx.gasprice <= maxGasPrice, "Maximum gas price allowed exceeded");
+    function register(string memory _name, address _beneficiary, bytes32 _salt) public {
+        bytes32 commit = getHash(_name, _beneficiary, _salt);
+
+        require(commits[commit] > 0, "The commit does not exist");
+        require(
+            timeUntilReveal < (block.timestamp - commits[commit]),
+            "The commit is not ready to be revealed"
+        );
+
+        // Delete commit
+        delete commits[commit];
+
         // Check for valid beneficiary
         require(_beneficiary != address(0), "Invalid beneficiary");
 
@@ -65,24 +96,31 @@ contract DCLController is Ownable {
         acceptedToken.transferFrom(msg.sender, address(this), PRICE);
         // Burn it
         acceptedToken.burn(PRICE);
+
         // Log
+        emit RevealedName(msg.sender, commit);
         emit NameBought(msg.sender, _beneficiary, PRICE, _name);
     }
 
     /**
-     * @dev Update max gas price
-     * @param _maxGasPrice - new max gas price to be used
-     */
-    function updateMaxGasPrice(uint256 _maxGasPrice) external onlyOwner {
-        require(_maxGasPrice != maxGasPrice, "Max gas price should be different");
-        require(
-            _maxGasPrice >= 1000000000,
-            "Max gas price should be greater than or equal to 1 gwei"
+    * @dev Return a bytes32 hash for the given arguments
+    * @param _name - string for the username
+    * @param _beneficiary - owner of the name
+    * @param _salt - bytes32 for the salt
+    * @return bytes32 - for the hash of the given arguments
+    */
+    function getHash(
+        string memory _name,
+        address _beneficiary,
+        bytes32 _salt
+    )
+    public
+    view
+    returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(address(this), msg.sender, _name, _beneficiary, _salt)
         );
-
-        emit MaxGasPriceChanged(maxGasPrice, _maxGasPrice);
-
-        maxGasPrice = _maxGasPrice;
     }
 
     /**
