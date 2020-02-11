@@ -75,7 +75,7 @@ contract DCLCommitAndRevealController is Ownable {
 
         require(commits[commit] > 0, "The commit does not exist");
         require(
-            timeUntilReveal < (block.timestamp - commits[commit]),
+            timeUntilReveal <= (block.timestamp - commits[commit]),
             "The commit is not ready to be revealed"
         );
 
