@@ -13,13 +13,8 @@ contract DCLCommitAndRevealController is Ownable {
 
     // Price of each name
     uint256 constant public PRICE = 100 ether;
+    uint256 constant public COMMIT_TTL = 1 days;
     uint256 constant public timeUntilReveal = 1 minutes;
-
-    struct Commit {
-        bytes32 commit;
-        uint256 blockNumber;
-        bool revealed;
-    }
 
     // Accepted ERC20 token
     IERC20Token public acceptedToken;
@@ -57,7 +52,7 @@ contract DCLCommitAndRevealController is Ownable {
     * @param _hash - bytes32 of the commit hash
     */
     function commitName(bytes32 _hash) public {
-        require(commits[_hash] == 0, "There is already a commit for the same hash");
+        require(!existCommit(_hash) || isCommitExpired(_hash), "There is already a valid commit for the same hash");
 
         commits[_hash] = block.timestamp;
 
@@ -71,16 +66,17 @@ contract DCLCommitAndRevealController is Ownable {
      * @param _salt - bytes32 for the salt
 	 */
     function register(string memory _name, address _beneficiary, bytes32 _salt) public {
-        bytes32 commit = getHash(_name, _beneficiary, _salt);
+        bytes32 _hash = getHash(_name, _beneficiary, _salt);
 
-        require(commits[commit] > 0, "The commit does not exist");
+        require(existCommit(_hash), "The commit does not exist");
+        require(!isCommitExpired(_hash), "The commit has expired");
         require(
-            timeUntilReveal <= (block.timestamp - commits[commit]),
+            timeUntilReveal <= (block.timestamp - commits[_hash]),
             "The commit is not ready to be revealed"
         );
 
         // Delete commit
-        delete commits[commit];
+        delete commits[_hash];
 
         // Check for valid beneficiary
         require(_beneficiary != address(0), "Invalid beneficiary");
@@ -98,7 +94,7 @@ contract DCLCommitAndRevealController is Ownable {
         acceptedToken.burn(PRICE);
 
         // Log
-        emit RevealedName(msg.sender, commit);
+        emit RevealedName(msg.sender, _hash);
         emit NameBought(msg.sender, _beneficiary, PRICE, _name);
     }
 
@@ -121,6 +117,32 @@ contract DCLCommitAndRevealController is Ownable {
         return keccak256(
             abi.encode(address(this), msg.sender, _name, _beneficiary, _salt)
         );
+    }
+
+    /**
+    * @dev Return whether a commit exist or not
+    * @param _hash - bytes32 of the commit hash
+    * @return bool - whether the commit exist
+    */
+    function existCommit(bytes32 _hash)
+    public
+    view
+    returns (bool)
+    {
+        return commits[_hash] > 0;
+    }
+
+    /**
+    * @dev Return whether a commit is expired or not
+    * @param _hash - bytes32 of the commit hash
+    * @return bool - whether the commit is expired or not
+    */
+    function isCommitExpired(bytes32 _hash)
+    public
+    view
+    returns (bool)
+    {
+        return commits[_hash] + COMMIT_TTL < block.timestamp;
     }
 
     /**

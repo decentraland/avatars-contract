@@ -292,7 +292,23 @@ describe('DCLCommitAndRevealController', function() {
       expect(log.args._hash).to.be.equal(hash)
     })
 
-    it('should reverts when trying to commit the same hash before revealed', async function() {
+    it('should commit the same hash after expired', async function() {
+      const hash = web3.utils.soliditySha3(
+        web3.eth.abi.encodeParameters(
+          ['address', 'address', 'string', 'address', 'bytes32'],
+          [dclControllerContract.address, user, subdomain1, user, salt]
+        )
+      )
+
+      await dclControllerContract.commitName(hash, fromUser)
+
+      await increaseTime(duration.days(1))
+      await increaseTime(duration.seconds(1))
+
+      await dclControllerContract.commitName(hash, fromUser)
+    })
+
+    it('reverts when trying to commit the same hash before revealed', async function() {
       const hash = web3.utils.soliditySha3(
         web3.eth.abi.encodeParameters(
           ['address', 'address', 'string', 'address', 'bytes32'],
@@ -304,7 +320,7 @@ describe('DCLCommitAndRevealController', function() {
 
       await assertRevert(
         dclControllerContract.commitName(hash, fromUser),
-        'There is already a commit for the same hash'
+        'There is already a valid commit for the same hash'
       )
     })
   })
@@ -545,6 +561,25 @@ describe('DCLCommitAndRevealController', function() {
       await assertRevert(
         dclControllerContract.register(subdomain1, user, salt1, fromUser),
         'The commit does not exist'
+      )
+    })
+
+    it('reverts when trying to register a name with an expired commit', async function() {
+      const hash = web3.utils.soliditySha3(
+        web3.eth.abi.encodeParameters(
+          ['address', 'address', 'string', 'address', 'bytes32'],
+          [dclControllerContract.address, user, subdomain1, user, salt]
+        )
+      )
+
+      await dclControllerContract.commitName(hash, fromUser)
+
+      await increaseTime(duration.days(1))
+      await increaseTime(duration.seconds(1))
+
+      await assertRevert(
+        dclControllerContract.register(subdomain1, user, salt, fromUser),
+        'The commit has expired'
       )
     })
 
