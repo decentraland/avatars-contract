@@ -4,18 +4,18 @@
 
 ### Mainnet
 
-## [Update 07/10/2020]
+## Update 07/10/2020
 
 - ENS Public Resolver = `0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41` 
 
-## [New 29/01/2020](https://medium.com/the-ethereum-name-service/ens-registry-migration-bug-fix-new-features-64379193a5a)
+### [New 29/01/2020](https://medium.com/the-ethereum-name-service/ens-registry-migration-bug-fix-new-features-64379193a5a)
 
 - ENS Registry = `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`
 - ENS Public Resolver = `0xDaaF96c344f63131acadD0Ea35170E7892d3dfBA`
 - ENS Base Registrar = `0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85`
 - ENS Registrar Controller = _`undefined yet after migration has finished`_
 
-## Old
+### Old
 
 - ENS Registry = `0x314159265dd8dbb310642f98f50c066173c1259b`
 - ENS Public Resolver = `0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8`
@@ -28,7 +28,7 @@
 - ENS Public Resolver = `0x12299799a50340fb860d276805e78550cbad3de3`
 - ENS Base Registrar = `0x227fcb6ddf14880413ef4f1a3df2bbb32bcb29d7`
 
-## Renew `dcl`
+### Renew `dcl`
 
 Call `nameExpires` method at **ENS Base Registrar** contract to check whether `dcl` domain is close to expire.
 
