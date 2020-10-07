@@ -4,6 +4,10 @@
 
 ### Mainnet
 
+## [Update 07/10/2020]
+
+- ENS Public Resolver = `0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41` 
+
 ## [New 29/01/2020](https://medium.com/the-ethereum-name-service/ens-registry-migration-bug-fix-new-features-64379193a5a)
 
 - ENS Registry = `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`
