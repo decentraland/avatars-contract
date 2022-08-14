@@ -48,7 +48,7 @@
     "truffle-flattener": "^1.2.4"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.4.0",
+    "@openzeppelin/contracts": "^4.7.2",
     "buidler": "^0.2.8",
     "openzeppelin-eth": "^2.2.0",
     "truffle-hdwallet-provider": "^1.0.10",
