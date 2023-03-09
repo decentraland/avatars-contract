@@ -1,32 +1,13 @@
-version: 2
+version: 2.1
+orbs:
+  node: circleci/node:5.1.0
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      - image: circleci/node:8.11.3
-
-    working_directory: ~/repo
-
+      - image: 'cimg/base:stable'
     steps:
       - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "package-lock.json" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
-      - run:
-          name: Install packages
-          command: npm install
-
-      - save_cache:
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package-lock.json" }}
-
-      # run tests!
-      - run:
-          name: Run tests
-          command: npm run test
+      - node/install:
+          node-version: '16.19.0'
+      - run: npm ci
+      - run: npx hardhat test
