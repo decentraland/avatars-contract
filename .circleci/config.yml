@@ -10,4 +10,4 @@ jobs:
       - node/install:
           node-version: '16.19.0'
       - run: npm ci
-      - run: npx hardhat test
+      - run: npm run test
