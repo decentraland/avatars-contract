@@ -105,8 +105,8 @@ describe('DCL Names V2', function () {
 
     creationParams = {
       ...fromDeployer,
-      //gas: 6e6,
-      gasPrice: 21e9,
+      // gas: 6e6,
+      // gasPrice: 21e9,
     }
 
     // Set up MANA Contract

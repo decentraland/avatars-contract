@@ -31,7 +31,8 @@
     "decentraland-contract-plugins": "^2.2.0",
     "ganache-cli": "^6.7.0",
     "hardhat": "^2.13.0",
-    "openzeppelin-solidity": "^2.4.0"
+    "openzeppelin-solidity": "^2.4.0",
+    "solidity-coverage": "^0.8.2"
   },
   "prettier": {
     "semi": false,
