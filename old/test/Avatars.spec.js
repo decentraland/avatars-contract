@@ -1,5 +1,5 @@
 import { Mana, ADDRESS_INDEXES } from 'decentraland-contract-plugins'
-import assertRevert from './helpers/assertRevert'
+import assertRevert from '../../test/helpers/assertRevert'
 
 const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
