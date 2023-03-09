@@ -1,4 +1,6 @@
 import hr, { web3 } from 'hardhat'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+
 import { Mana, ADDRESS_INDEXES } from 'decentraland-contract-plugins'
 import assertRevert from './helpers/assertRevert'
 
@@ -89,7 +91,7 @@ describe('DCL Names V2', function () {
   let dclRegistrarContract
   let dclControllerContract
 
-  beforeEach(async function () {
+  async function deployTokenFixture() {
     // Create Listing environment
     accounts = await web3.eth.getAccounts()
     deployer = accounts[ADDRESS_INDEXES.deployer]
@@ -188,6 +190,10 @@ describe('DCL Names V2', function () {
     )
 
     await mana.authorize(dclControllerContract.address)
+  }
+
+  beforeEach(async function () {
+    await loadFixture(deployTokenFixture)
   })
 
   describe('DCLRegistrar', function () {
