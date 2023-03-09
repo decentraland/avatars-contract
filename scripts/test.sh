@@ -52,9 +52,8 @@ else
 fi
 
 
-#npx buidler test
 if [ "$SOLIDITY_COVERAGE" = true ]; then
-  npx buidler coverage
+  npx hardhat coverage
 else
-  npx buidler test
+  npx hardhat test
 fi

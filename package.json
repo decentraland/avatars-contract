@@ -29,6 +29,7 @@
     "babel-register": "^6.26.0",
     "bn-chai": "^1.0.1",
     "decentraland-contract-plugins": "^2.2.0",
+    "ganache-cli": "^6.7.0",
     "hardhat": "^2.13.0",
     "openzeppelin-solidity": "^2.4.0"
   },
