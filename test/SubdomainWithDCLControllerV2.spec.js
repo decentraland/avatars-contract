@@ -2059,21 +2059,28 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
         expect(price).to.be.gt.BN(0)
 
-        const userBalance = await manaContract.balanceOf(user)
-        const feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+        let expectedUserBalance = new BN('1000000000000000000000')
+        let expectedFeeCollectorBalance = new BN('1000000000000000000000')
+
+        let userBalance = await manaContract.balanceOf(user)
+        let feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
 
         await dclControllerContract.register(subdomain1, user, {
           ...fromUser,
           gasPrice: MAX_GAS_PRICE,
         })
 
-        const newUserBalance = await manaContract.balanceOf(user)
-        const newFeeCollectorBalance = await manaContract.balanceOf(
-          feeCollector
-        )
+        expectedUserBalance = expectedUserBalance.sub(price)
+        expectedFeeCollectorBalance = expectedFeeCollectorBalance.add(price)
 
-        expect(newUserBalance).to.eq.BN(userBalance.sub(price))
-        expect(newFeeCollectorBalance).to.eq.BN(feeCollectorBalance.add(price))
+        userBalance = await manaContract.balanceOf(user)
+        feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
       })
 
       it('should register a name with a-z', async function () {
