@@ -1965,7 +1965,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
 
         const collector = await dclControllerContract.feeCollector()
-        expect(collector).to.eq.BN(feeCollector)
+        expect(collector).to.be.equal(feeCollector)
       })
 
       it('reverts if acceptedToken is not a contract', async function () {
