@@ -2023,7 +2023,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           { ...fromUser, gasPrice: MAX_GAS_PRICE }
         )
 
-        expect(logs.length).to.be.equal(5)
+        expect(logs.length).to.be.equal(4)
 
         const newOwnerLog = logs[0]
         expect(newOwnerLog.event).to.be.equal('NewOwner')
@@ -2050,12 +2050,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         )
         expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
 
-        const burnLog = logs[3]
-        expect(burnLog.event).to.be.equal('Burn')
-        expect(burnLog.args.burner).to.be.equal(dclControllerContract.address)
-        expect(burnLog.args.value).to.eq.BN(PRICE)
-
-        const nameBoughtLog = logs[4]
+        const nameBoughtLog = logs[3]
         expect(nameBoughtLog.event).to.be.equal('NameBought')
         expect(nameBoughtLog.args._caller).to.be.equal(user)
         expect(nameBoughtLog.args._beneficiary).to.be.equal(user)
