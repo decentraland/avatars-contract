@@ -1968,6 +1968,22 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         expect(collector).to.eq.BN(feeCollector)
       })
 
+      it('should emit a FeeCollectorChanged event', async function () {
+        const contract = await DCLControllerV2.new(
+          manaContract.address,
+          dclRegistrarContract.address,
+          feeCollector,
+          creationParams
+        )
+
+        const events = await contract.getPastEvents()
+        const filteredEvents = events.filter(e => e.event === 'FeeCollectorChanged')
+
+        expect(filteredEvents.length).to.be.equal(1)
+        expect(filteredEvents[0].args._oldFeeCollector).to.be.equal(ZERO_ADDRESS)
+        expect(filteredEvents[0].args._newFeeCollector).to.be.equal(feeCollector)
+      })
+
       it('reverts if acceptedToken is not a contract', async function () {
         await assertRevert(
           DCLControllerV2.new(
