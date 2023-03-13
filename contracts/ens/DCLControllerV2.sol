@@ -141,6 +141,8 @@ contract DCLControllerV2 is Ownable {
     }
 
     function _setFeeCollector(address _feeCollector) internal {
+        require(_feeCollector != address(0), "Invalid fee collector");
+        
         emit FeeCollectorChanged(feeCollector, _feeCollector);
 
         feeCollector = _feeCollector;
