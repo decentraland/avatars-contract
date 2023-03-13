@@ -30,6 +30,9 @@ contract DCLControllerV2 is Ownable {
     // Emitted when the max gas price is changed
     event MaxGasPriceChanged(uint256 indexed _oldMaxGasPrice, uint256 indexed _newMaxGasPrice);
 
+    // Emitted when the fee collector is changed
+    event FeeCollectorChanged(address indexed _oldFeeCollector, address indexed _newFeeCollector);
+
     /**
 	 * @dev Constructor of the contract
      * @param _acceptedToken - address of the accepted token
@@ -44,8 +47,8 @@ contract DCLControllerV2 is Ownable {
         acceptedToken = _acceptedToken;
         // DCL registrar
         registrar = _registrar;
-        // Fee Collector
-        feeCollector = _feeCollector;
+
+        _setFeeCollector(_feeCollector);
     }
 
     /**
@@ -91,6 +94,15 @@ contract DCLControllerV2 is Ownable {
     }
 
     /**
+     * @notice Set the fee collector
+     * @dev Only the owner can change the fee collector
+     * @param _feeCollector - the address of the new collector
+     */
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        _setFeeCollector(_feeCollector);
+    }
+
+    /**
      * @dev Validate if a user has balance and the contract has enough allowance
      * to use user's accepted token on his belhalf
      * @param _user - address of the user
@@ -128,6 +140,12 @@ contract DCLControllerV2 is Ownable {
 
     function _isNumber(bytes1 _char) internal pure returns (bool) {
         return (_char >= 0x30 && _char <= 0x39);
+    }
+
+    function _setFeeCollector(address _feeCollector) internal {
+        emit FeeCollectorChanged(feeCollector, _feeCollector);
+
+        feeCollector = _feeCollector;
     }
 
 }
