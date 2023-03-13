@@ -2055,6 +2055,10 @@ describe('DCL Names V2 with DCLControllerV2', function () {
       })
 
       it('should transfer the fee from the caller to the fee collector', async function () {
+        const price = await dclControllerContract.PRICE()
+
+        expect(price).to.be.gt.BN(0)
+
         const userBalance = await manaContract.balanceOf(user)
         const feeCollectorBalance = await manaContract.balanceOf(feeCollector)
 
@@ -2068,8 +2072,8 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           feeCollector
         )
 
-        expect(newUserBalance).to.eq.BN(userBalance.sub(PRICE))
-        expect(newFeeCollectorBalance).to.eq.BN(feeCollectorBalance.add(PRICE))
+        expect(newUserBalance).to.eq.BN(userBalance.sub(price))
+        expect(newFeeCollectorBalance).to.eq.BN(feeCollectorBalance.add(price))
       })
 
       it('should register a name with a-z', async function () {
