@@ -18,6 +18,8 @@ contract DCLControllerV2 is Ownable {
     IERC20Token public acceptedToken;
     // DCL Registrar
     IDCLRegistrar public registrar;
+    // Fee Collector
+    address public feeCollector;
 
     // Price of each name
     uint256 public maxGasPrice = 20000000000; // 20 gwei
@@ -32,8 +34,9 @@ contract DCLControllerV2 is Ownable {
 	 * @dev Constructor of the contract
      * @param _acceptedToken - address of the accepted token
      * @param _registrar - address of the DCL registrar contract
+     * @param _feeCollector - address of the fee collector
 	 */
-    constructor(IERC20Token _acceptedToken, IDCLRegistrar _registrar) public {
+    constructor(IERC20Token _acceptedToken, IDCLRegistrar _registrar, address _feeCollector) public {
         require(address(_acceptedToken).isContract(), "Accepted token should be a contract");
         require(address(_registrar).isContract(), "Registrar should be a contract");
 
@@ -41,6 +44,8 @@ contract DCLControllerV2 is Ownable {
         acceptedToken = _acceptedToken;
         // DCL registrar
         registrar = _registrar;
+        // Fee Collector
+        feeCollector = _feeCollector;
     }
 
     /**

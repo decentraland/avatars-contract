@@ -24,7 +24,8 @@ contract FakeDCLControllerV2 is DCLControllerV2 {
 
     constructor(
         IERC20Token _acceptedToken,
-        IDCLRegistrar _registrar
-    ) public DCLControllerV2(_acceptedToken, _registrar) {}
+        IDCLRegistrar _registrar,
+        address _feeCollector
+    ) public DCLControllerV2(_acceptedToken, _registrar, _feeCollector) {}
 
 }

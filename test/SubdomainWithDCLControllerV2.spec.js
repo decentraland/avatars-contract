@@ -75,6 +75,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   let deployer
   let user
   let userController
+  let feeCollector
   let hacker
   let anotherUser
   let fromUserController
@@ -99,6 +100,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
     anotherUser = accounts[ADDRESS_INDEXES.anotherUser]
     hacker = accounts[ADDRESS_INDEXES.hacker]
     userController = accounts[Object.keys(ADDRESS_INDEXES).length]
+    feeCollector = accounts[Object.keys(ADDRESS_INDEXES).length + 1]
     fromUser = { from: user }
     fromAnotherUser = { from: anotherUser }
     fromUserController = { from: userController }
@@ -176,6 +178,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
     dclControllerContract = await DCLControllerV2.new(
       manaContract.address,
       dclRegistrarContract.address,
+      feeCollector,
       creationParams
     )
 
@@ -1941,10 +1944,11 @@ describe('DCL Names V2 with DCLControllerV2', function () {
     })
 
     describe('Constructor', function () {
-      it('should be depoyed with valid arguments', async function () {
+      it('should be deployed with valid arguments', async function () {
         const contract = await DCLControllerV2.new(
           manaContract.address,
           dclRegistrarContract.address,
+          feeCollector,
           creationParams
         )
 
@@ -1959,18 +1963,31 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
         const maxGasPrice = await dclControllerContract.maxGasPrice()
         expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+
+        const collector = await dclControllerContract.feeCollector()
+        expect(collector).to.be.equal(feeCollector)
       })
 
       it('reverts if acceptedToken is not a contract', async function () {
         await assertRevert(
-          DCLControllerV2.new(user, dclRegistrarContract.address, creationParams),
+          DCLControllerV2.new(
+            user,
+            dclRegistrarContract.address,
+            feeCollector,
+            creationParams
+          ),
           'Accepted token should be a contract'
         )
       })
 
       it('reverts if registrar is not a contract', async function () {
         await assertRevert(
-          DCLControllerV2.new(manaContract.address, user, creationParams),
+          DCLControllerV2.new(
+            manaContract.address,
+            user,
+            feeCollector,
+            creationParams
+          ),
           'Registrar should be a contract'
         )
       })
