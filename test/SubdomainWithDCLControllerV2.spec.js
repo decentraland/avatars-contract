@@ -1991,6 +1991,18 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           'Registrar should be a contract'
         )
       })
+
+      it('reverts if fee collector is address 0', async function () {
+        await assertRevert(
+          DCLControllerV2.new(
+            manaContract.address,
+            dclRegistrarContract.address,
+            ZERO_ADDRESS,
+            creationParams
+          ),
+          'Invalid fee collector'
+        )
+      })
     })
 
     describe('Register', function () {
@@ -2433,6 +2445,13 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         await assertRevert(
           dclControllerContract.setFeeCollector(anotherUser, fromAnotherUser),
           'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts when the fee collector is address 0', async function () {
+        await assertRevert(
+          dclControllerContract.setFeeCollector(ZERO_ADDRESS, fromDeployer),
+          'Invalid fee collector'
         )
       })
     })
