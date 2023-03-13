@@ -2001,7 +2001,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           { ...fromUser, gasPrice: MAX_GAS_PRICE }
         )
 
-        expect(logs.length).to.be.equal(5)
+        expect(logs.length).to.be.equal(4)
 
         const newOwnerLog = logs[0]
         expect(newOwnerLog.event).to.be.equal('NewOwner')
@@ -2028,12 +2028,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         )
         expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
 
-        const burnLog = logs[3]
-        expect(burnLog.event).to.be.equal('Burn')
-        expect(burnLog.args.burner).to.be.equal(dclControllerContract.address)
-        expect(burnLog.args.value).to.eq.BN(PRICE)
-
-        const nameBoughtLog = logs[4]
+        const nameBoughtLog = logs[3]
         expect(nameBoughtLog.event).to.be.equal('NameBought')
         expect(nameBoughtLog.args._caller).to.be.equal(user)
         expect(nameBoughtLog.args._beneficiary).to.be.equal(user)
@@ -2057,6 +2052,37 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           subdomain1Hash
         )
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+      })
+
+      it('should transfer the fee from the caller to the fee collector', async function () {
+        const price = await dclControllerContract.PRICE()
+
+        expect(price).to.be.gt.BN(0)
+
+        const initialBalance = new BN('1000000000000000000000')
+
+        let expectedUserBalance = initialBalance
+        let expectedFeeCollectorBalance = initialBalance
+
+        let userBalance = await manaContract.balanceOf(user)
+        let feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
+
+        await dclControllerContract.register(subdomain1, user, {
+          ...fromUser,
+          gasPrice: MAX_GAS_PRICE,
+        })
+
+        expectedUserBalance = expectedUserBalance.sub(price)
+        expectedFeeCollectorBalance = expectedFeeCollectorBalance.add(price)
+
+        userBalance = await manaContract.balanceOf(user)
+        feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
       })
 
       it('should register a name with a-z', async function () {

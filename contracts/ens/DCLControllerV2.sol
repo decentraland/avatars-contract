@@ -69,10 +69,8 @@ contract DCLControllerV2 is Ownable {
 
         // Register the name
         registrar.register(_name, _beneficiary);
-        // Debit `price` from sender
-        acceptedToken.transferFrom(msg.sender, address(this), PRICE);
-        // Burn it
-        acceptedToken.burn(PRICE);
+        // Transfer PRICE to the fee collector
+        acceptedToken.transferFrom(msg.sender, feeCollector, PRICE);
         // Log
         emit NameBought(msg.sender, _beneficiary, PRICE, _name);
     }
