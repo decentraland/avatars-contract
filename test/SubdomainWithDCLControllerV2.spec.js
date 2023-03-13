@@ -2059,8 +2059,10 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
         expect(price).to.be.gt.BN(0)
 
-        let expectedUserBalance = new BN('1000000000000000000000')
-        let expectedFeeCollectorBalance = new BN('1000000000000000000000')
+        const initialBalance = new BN('1000000000000000000000')
+
+        let expectedUserBalance = initialBalance
+        let expectedFeeCollectorBalance = initialBalance
 
         let userBalance = await manaContract.balanceOf(user)
         let feeCollectorBalance = await manaContract.balanceOf(feeCollector)
