@@ -2372,6 +2372,44 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         )
       })
     })
+
+    describe('setFeeCollector', function () {
+      it('should update the fee collector', async function () {
+        const newFeeCollector = anotherUser
+        expect(await dclControllerContract.feeCollector()).to.be.equal(
+          feeCollector
+        )
+        await dclControllerContract.setFeeCollector(
+          newFeeCollector,
+          fromDeployer
+        )
+        expect(await dclControllerContract.feeCollector()).to.be.equal(
+          newFeeCollector
+        )
+      })
+
+      it('should emit a FeeCollectorChanged event', async function () {
+        const oldFeeCollector = feeCollector
+        const newFeeCollector = anotherUser
+
+        const { logs } = await dclControllerContract.setFeeCollector(
+          newFeeCollector,
+          fromDeployer
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('FeeCollectorChanged')
+        expect(logs[0].args._oldFeeCollector).to.be.equal(oldFeeCollector)
+        expect(logs[0].args._newFeeCollector).to.be.equal(newFeeCollector)
+      })
+
+      it('reverts when the sender is not the owner', async function () {
+        await assertRevert(
+          dclControllerContract.setFeeCollector(anotherUser, fromAnotherUser),
+          'Ownable: caller is not the owner'
+        )
+      })
+    })
   })
 
   describe('ENS ecosystem', function () {
