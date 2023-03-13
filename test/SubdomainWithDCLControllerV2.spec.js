@@ -2054,6 +2054,24 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
       })
 
+      it('should transfer the fee from the caller to the fee collector', async function () {
+        const userBalance = await manaContract.balanceOf(user)
+        const feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        await dclControllerContract.register(subdomain1, user, {
+          ...fromUser,
+          gasPrice: MAX_GAS_PRICE,
+        })
+
+        const newUserBalance = await manaContract.balanceOf(user)
+        const newFeeCollectorBalance = await manaContract.balanceOf(
+          feeCollector
+        )
+
+        expect(newUserBalance).to.eq.BN(userBalance.sub(PRICE))
+        expect(newFeeCollectorBalance).to.eq.BN(feeCollectorBalance.add(PRICE))
+      })
+
       it('should register a name with a-z', async function () {
         let name = 'qwertyuiopasdfg'
         await dclControllerContract.register(name, user, fromUser)
