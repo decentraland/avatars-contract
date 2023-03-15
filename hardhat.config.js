@@ -19,7 +19,6 @@ module.exports = {
       },
     },
   },
-  defaultNetwork: 'hardhat',
   networks: {
     deploy: {
       url: process.env.RPC_URL || 'http://some-rpc-url.org',
