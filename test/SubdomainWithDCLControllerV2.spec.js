@@ -92,7 +92,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   let dclRegistrarContract
   let dclControllerContract
 
-  async function deployTokenFixture() {
+  async function fixture() {
     // Create Listing environment
     accounts = await web3.eth.getAccounts()
     deployer = accounts[ADDRESS_INDEXES.deployer]
@@ -196,7 +196,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   }
 
   beforeEach(async function () {
-    await loadFixture(deployTokenFixture)
+    await loadFixture(fixture)
   })
 
   describe('DCLRegistrar', function () {
