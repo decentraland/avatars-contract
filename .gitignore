@@ -9,3 +9,4 @@ cache
 coverage
 coverage.json
 .vscode
+.env
