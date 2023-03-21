@@ -21,14 +21,8 @@ contract DCLControllerV2 is Ownable {
     // Fee Collector
     address public feeCollector;
 
-    // Price of each name
-    uint256 public maxGasPrice = 20000000000; // 20 gwei
-
     // Emitted when a name is bought
     event NameBought(address indexed _caller, address indexed _beneficiary, uint256 _price, string _name);
-
-    // Emitted when the max gas price is changed
-    event MaxGasPriceChanged(uint256 indexed _oldMaxGasPrice, uint256 indexed _newMaxGasPrice);
 
     // Emitted when the fee collector is changed
     event FeeCollectorChanged(address indexed _oldFeeCollector, address indexed _newFeeCollector);
@@ -57,8 +51,6 @@ contract DCLControllerV2 is Ownable {
 	 * @param _beneficiary - owner of the name
 	 */
     function register(string memory _name, address _beneficiary) public {
-        // Check gas price
-        require(tx.gasprice <= maxGasPrice, "Maximum gas price allowed exceeded");
         // Check for valid beneficiary
         require(_beneficiary != address(0), "Invalid beneficiary");
 
@@ -76,22 +68,6 @@ contract DCLControllerV2 is Ownable {
     }
 
     /**
-     * @dev Update max gas price
-     * @param _maxGasPrice - new max gas price to be used
-     */
-    function updateMaxGasPrice(uint256 _maxGasPrice) external onlyOwner {
-        require(_maxGasPrice != maxGasPrice, "Max gas price should be different");
-        require(
-            _maxGasPrice >= 1000000000,
-            "Max gas price should be greater than or equal to 1 gwei"
-        );
-
-        emit MaxGasPriceChanged(maxGasPrice, _maxGasPrice);
-
-        maxGasPrice = _maxGasPrice;
-    }
-
-    /**
      * @notice Set the fee collector
      * @dev Only the owner can change the fee collector
      * @param _feeCollector - the address of the new collector
@@ -102,7 +78,7 @@ contract DCLControllerV2 is Ownable {
 
     /**
      * @dev Validate if a user has balance and the contract has enough allowance
-     * to use user's accepted token on his belhalf
+     * to use user's accepted token on his behalf
      * @param _user - address of the user
      */
     function _requireBalance(address _user) internal view {
@@ -117,7 +93,7 @@ contract DCLControllerV2 is Ownable {
     }
 
     /**
-    * @dev Validate a nane
+    * @dev Validate a name
     * @notice that only a-z is allowed
     * @param _name - string for the name
     */
@@ -125,7 +101,7 @@ contract DCLControllerV2 is Ownable {
         bytes memory tempName = bytes(_name);
         require(
             tempName.length >= 2 && tempName.length <= 15,
-            "Name should be greather than or equal to 2 and less than or equal to 15"
+            "Name should be greater than or equal to 2 and less than or equal to 15"
         );
         for(uint256 i = 0; i < tempName.length; i++) {
             require(_isLetter(tempName[i]) || _isNumber(tempName[i]), "Invalid Character");

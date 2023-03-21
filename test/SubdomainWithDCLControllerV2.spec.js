@@ -27,7 +27,6 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
   const ZERO_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const MAX_GAS_PRICE = '20000000000'
 
   const ethLabelHash = web3.utils.sha3(TOP_DOMAIN)
   const dclLabelHash = web3.utils.sha3(DOMAIN)
@@ -1961,9 +1960,6 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         const price = await dclControllerContract.PRICE()
         expect(price).to.eq.BN(PRICE)
 
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-
         const collector = await dclControllerContract.feeCollector()
         expect(collector).to.be.equal(feeCollector)
       })
@@ -2010,7 +2006,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         const { logs } = await dclControllerContract.register(
           subdomain1,
           user,
-          { ...fromUser, gasPrice: MAX_GAS_PRICE }
+          { ...fromUser }
         )
 
         expect(logs.length).to.be.equal(4)
@@ -2084,7 +2080,6 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
         await dclControllerContract.register(subdomain1, user, {
           ...fromUser,
-          gasPrice: MAX_GAS_PRICE,
         })
 
         expectedUserBalance = expectedUserBalance.sub(price)
@@ -2169,16 +2164,6 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           web3.utils.toHex(tokenId)
         )
         expect(subdomain).to.be.equal(name)
-      })
-
-      it('reverts when trying to register a name with a gas price higher than max gas price', async function () {
-        await assertRevert(
-          dclControllerContract.register(subdomain1, user, {
-            ...fromUser,
-            gasPrice: MAX_GAS_PRICE + 1,
-          }),
-          'Maximum gas price allowed exceeded'
-        )
       })
 
       it('reverts when the name has invalid characters', async function () {
@@ -2305,19 +2290,19 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         const bigUsername = 'abignameregistry'
         await assertRevert(
           dclControllerContract.register(bigUsername, user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
       })
 
       it('reverts when trying to register a name with a lenght < 3', async function () {
         await assertRevert(
           dclControllerContract.register('', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
 
         await assertRevert(
           dclControllerContract.register('a', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
       })
 
@@ -2335,78 +2320,6 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
           'The contract is not authorized to use the accepted token on sender behalf'
-        )
-      })
-    })
-
-    describe('updateMaxGasPrice', function () {
-      it('should update the max gas price', async function () {
-        let maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-
-        const newMaxGasPrice = 1000000000
-        const { logs } = await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        expect(logs.length).to.be.equal(1)
-
-        const newOwnerLog = logs[0]
-        expect(newOwnerLog.event).to.be.equal('MaxGasPriceChanged')
-        expect(newOwnerLog.args._oldMaxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-        expect(newOwnerLog.args._newMaxGasPrice).to.eq.BN(newMaxGasPrice)
-
-        maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('should update the max gas price to 1 gwei', async function () {
-        const newMaxGasPrice = 1000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('should update the max gas price to 30 gwei', async function () {
-        const newMaxGasPrice = 30000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('reverts when updating the max gas price by an unauthorized user', async function () {
-        const newMaxGasPrice = 10000000000
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(newMaxGasPrice, fromHacker),
-          'Ownable: caller is not the owner'
-        )
-      })
-
-      it('reverts when updating the max gas price with lower than 1 gwei', async function () {
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(0, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
-        )
-
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(999999999, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
-        )
-      })
-
-      it('reverts when updating the max gas price with the same value', async function () {
-        await assertRevert(
-          dclControllerContract.updateMaxGasPrice(MAX_GAS_PRICE, fromDeployer),
-          'Max gas price should be different'
         )
       })
     })
