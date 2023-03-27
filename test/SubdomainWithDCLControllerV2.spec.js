@@ -75,6 +75,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   let user
   let userController
   let feeCollector
+  let controllerOwner
   let hacker
   let anotherUser
   let fromUserController
@@ -82,6 +83,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
   let fromHacker
   let fromAnotherUser
   let fromDeployer
+  let fromControllerOwner
 
   // Contracts
   let manaContract
@@ -100,11 +102,13 @@ describe('DCL Names V2 with DCLControllerV2', function () {
     hacker = accounts[ADDRESS_INDEXES.hacker]
     userController = accounts[Object.keys(ADDRESS_INDEXES).length]
     feeCollector = accounts[Object.keys(ADDRESS_INDEXES).length + 1]
+    controllerOwner = accounts[Object.keys(ADDRESS_INDEXES).length + 2]
     fromUser = { from: user }
     fromAnotherUser = { from: anotherUser }
     fromUserController = { from: userController }
     fromHacker = { from: hacker }
     fromDeployer = { from: deployer }
+    fromControllerOwner = { from: controllerOwner }
 
     creationParams = {
       ...fromDeployer,
@@ -178,6 +182,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
       manaContract.address,
       dclRegistrarContract.address,
       feeCollector,
+      controllerOwner,
       creationParams
     )
 
@@ -1948,6 +1953,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
           manaContract.address,
           dclRegistrarContract.address,
           feeCollector,
+          controllerOwner,
           creationParams
         )
 
@@ -1957,11 +1963,27 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         const registrar = await contract.registrar()
         expect(registrar).to.be.equal(dclRegistrarContract.address)
 
-        const price = await dclControllerContract.PRICE()
+        const price = await contract.PRICE()
         expect(price).to.eq.BN(PRICE)
 
-        const collector = await dclControllerContract.feeCollector()
+        const collector = await contract.feeCollector()
         expect(collector).to.be.equal(feeCollector)
+
+        const owner = await contract.owner()
+        expect(owner).to.be.equal(controllerOwner)
+      })
+
+      it('should accept owner the same as deployer', async function () {
+        const contract = await DCLControllerV2.new(
+          manaContract.address,
+          dclRegistrarContract.address,
+          feeCollector,
+          deployer,
+          creationParams
+        )
+
+        const owner = await contract.owner()
+        expect(owner).to.be.equal(deployer)
       })
 
       it('reverts if acceptedToken is not a contract', async function () {
@@ -1970,6 +1992,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
             user,
             dclRegistrarContract.address,
             feeCollector,
+            controllerOwner,
             creationParams
           ),
           'Accepted token should be a contract'
@@ -1982,6 +2005,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
             manaContract.address,
             user,
             feeCollector,
+            controllerOwner,
             creationParams
           ),
           'Registrar should be a contract'
@@ -1994,9 +2018,23 @@ describe('DCL Names V2 with DCLControllerV2', function () {
             manaContract.address,
             dclRegistrarContract.address,
             ZERO_ADDRESS,
+            controllerOwner,
             creationParams
           ),
           'Invalid fee collector'
+        )
+      })
+
+      it('reverts if owner is address 0', async function () {
+        await assertRevert(
+          DCLControllerV2.new(
+            manaContract.address,
+            dclRegistrarContract.address,
+            feeCollector,
+            ZERO_ADDRESS,
+            creationParams
+          ),
+          'Ownable: new owner is the zero address'
         )
       })
     })
@@ -2332,7 +2370,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         )
         await dclControllerContract.setFeeCollector(
           newFeeCollector,
-          fromDeployer
+          fromControllerOwner
         )
         expect(await dclControllerContract.feeCollector()).to.be.equal(
           newFeeCollector
@@ -2345,7 +2383,7 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
         const { logs } = await dclControllerContract.setFeeCollector(
           newFeeCollector,
-          fromDeployer
+          fromControllerOwner
         )
 
         expect(logs.length).to.be.equal(1)
@@ -2363,8 +2401,57 @@ describe('DCL Names V2 with DCLControllerV2', function () {
 
       it('reverts when the fee collector is address 0', async function () {
         await assertRevert(
-          dclControllerContract.setFeeCollector(ZERO_ADDRESS, fromDeployer),
+          dclControllerContract.setFeeCollector(
+            ZERO_ADDRESS,
+            fromControllerOwner
+          ),
           'Invalid fee collector'
+        )
+      })
+    })
+
+    describe('transferOwnership', function () {
+      it('should update the owner', async function () {
+        let currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(controllerOwner)
+
+        await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
+        )
+
+        currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(anotherUser)
+      })
+
+      it('should emit an OwnershipTransferred event', async function () {
+        const { logs } = await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('OwnershipTransferred')
+        expect(logs[0].args.previousOwner).to.be.equal(controllerOwner)
+        expect(logs[0].args.newOwner).to.be.equal(anotherUser)
+      })
+
+      it('reverts when the caller is not the owner of the contract', async function () {
+        await assertRevert(
+          dclControllerContract.transferOwnership(anotherUser, fromAnotherUser),
+          'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts when the new owner is the zero address', async function () {
+        await assertRevert(
+          dclControllerContract.transferOwnership(
+            ZERO_ADDRESS,
+            fromControllerOwner
+          ),
+          'Ownable: new owner is the zero address'
         )
       })
     })
