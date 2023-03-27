@@ -33,7 +33,7 @@ contract DCLControllerV2 is Ownable {
      * @param _registrar - address of the DCL registrar contract
      * @param _feeCollector - address of the fee collector
 	 */
-    constructor(IERC20Token _acceptedToken, IDCLRegistrar _registrar, address _feeCollector) public {
+    constructor(IERC20Token _acceptedToken, IDCLRegistrar _registrar, address _feeCollector, address _owner) public {
         require(address(_acceptedToken).isContract(), "Accepted token should be a contract");
         require(address(_registrar).isContract(), "Registrar should be a contract");
 
@@ -43,6 +43,8 @@ contract DCLControllerV2 is Ownable {
         registrar = _registrar;
 
         _setFeeCollector(_feeCollector);
+
+        _transferOwnership(_owner);
     }
 
     /**
