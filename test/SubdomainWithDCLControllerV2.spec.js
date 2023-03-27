@@ -2409,6 +2409,52 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         )
       })
     })
+
+    describe('transferOwnership', function () {
+      it('should update the owner', async function () {
+        let currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(controllerOwner)
+
+        await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
+        )
+
+        currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(anotherUser)
+      })
+
+      it('should emit an OwnershipTransferred event', async function () {
+        const { logs } = await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('OwnershipTransferred')
+        expect(logs[0].args.previousOwner).to.be.equal(controllerOwner)
+        expect(logs[0].args.newOwner).to.be.equal(anotherUser)
+      })
+
+      it('reverts when the caller is not the owner of the contract', async function () {
+        await assertRevert(
+          dclControllerContract.transferOwnership(anotherUser, fromAnotherUser),
+          'Ownable: caller is not the owner'
+        )
+      })
+
+      it('reverts when the new owner is the zero address', async function () {
+        await assertRevert(
+          dclControllerContract.transferOwnership(
+            ZERO_ADDRESS,
+            fromControllerOwner
+          ),
+          'Ownable: new owner is the zero address'
+        )
+      })
+    })
   })
 
   describe('ENS ecosystem', function () {
