@@ -65,7 +65,7 @@ contract DCLControllerV2 is Ownable {
         // Register the name
         registrar.register(_name, _beneficiary);
         // Transfer PRICE to the fee collector
-        acceptedToken.transferFrom(msg.sender, feeCollector, PRICE);
+        require(acceptedToken.transferFrom(msg.sender, feeCollector, PRICE), "Tokens could not be transferred");
         // Log
         emit NameBought(msg.sender, _beneficiary, PRICE, _name);
     }
