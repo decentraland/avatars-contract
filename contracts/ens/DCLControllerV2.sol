@@ -59,8 +59,6 @@ contract DCLControllerV2 is Ownable {
 
         // Check if the name is valid
         _requireNameValid(_name);
-        // Check if the sender has at least `price` and the contract has allowance to use on its behalf
-        _requireBalance(msg.sender);
 
         // Register the name
         registrar.register(_name, _beneficiary);
@@ -77,22 +75,6 @@ contract DCLControllerV2 is Ownable {
      */
     function setFeeCollector(address _feeCollector) external onlyOwner {
         _setFeeCollector(_feeCollector);
-    }
-
-    /**
-     * @dev Validate if a user has balance and the contract has enough allowance
-     * to use user's accepted token on his behalf
-     * @param _user - address of the user
-     */
-    function _requireBalance(address _user) internal view {
-        require(
-            acceptedToken.balanceOf(_user) >= PRICE,
-            "Insufficient funds"
-        );
-        require(
-            acceptedToken.allowance(_user, address(this)) >= PRICE,
-            "The contract is not authorized to use the accepted token on sender behalf"
-        );
     }
 
     /**
