@@ -13,6 +13,7 @@ const FakeENSRegistryFactory = artifacts.require('FakeENSRegistryFactory')
 const ENSRegistry = artifacts.require('ENSRegistryWithFallback')
 const ENSBaseRegistrar = artifacts.require('BaseRegistrarImplementation')
 const ENSPublicResolver = artifacts.require('ENSPublicResolver')
+const FakeERC20 = artifacts.require('FakeERC20')
 
 describe('DCL Names V2 with DCLControllerV2', function () {
   this.timeout(100000)
@@ -2358,6 +2359,28 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
           'The contract is not authorized to use the accepted token on sender behalf'
+        )
+      })
+
+      it('reverts when transferFrom returns false', async function () {
+        // Deploy fake ERC20 that returns false on transferFrom.
+        const fakeERC20 = await FakeERC20.new(fromDeployer)
+
+        // Deploy the controller with the fake ERC20.
+        const otherDclControllerContract = await DCLControllerV2.new(
+          fakeERC20.address,
+          dclRegistrarContract.address,
+          feeCollector,
+          controllerOwner,
+          creationParams
+        )
+
+        // Add it to the registrar to prevent undesired reverts.
+        await dclRegistrarContract.addController(otherDclControllerContract.address)
+
+        await assertRevert(
+          otherDclControllerContract.register('nando', user, fromDeployer),
+          'Tokens could not be transferred'
         )
       })
     })
