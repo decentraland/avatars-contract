@@ -2349,7 +2349,8 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         await manaContract.burn(balance, fromUser)
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
-          'Insufficient funds'
+          // Error message from mana contract.
+          'invalid opcode'
         )
       })
 
@@ -2357,7 +2358,8 @@ describe('DCL Names V2 with DCLControllerV2', function () {
         await manaContract.approve(dclControllerContract.address, 0, fromUser)
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
-          'The contract is not authorized to use the accepted token on sender behalf'
+          // Error message from mana contract.
+          'invalid opcode'
         )
       })
     })
