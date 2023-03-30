@@ -29,7 +29,10 @@ contract DCLControllerV2 is Ownable {
 
     /**
 	 * @dev Constructor of the contract
-     * @param _acceptedToken - address of the accepted token
+     * The acceptedToken must be an ERC20 that reverts on a failed transfer. 
+     * Tokens that rely on the return value of the transfer function will not work as intended with this contract.
+     * As the return value is not being verified in this contract, failed transfers will not revert and a name will be registered for free.
+     * @param _acceptedToken - address of the accepted ERC20 token.
      * @param _registrar - address of the DCL registrar contract
      * @param _feeCollector - address of the fee collector
      * @param _owner - address of the contract owner
