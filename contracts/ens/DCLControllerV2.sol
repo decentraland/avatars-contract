@@ -29,7 +29,7 @@ contract DCLControllerV2 is Ownable {
 
     /**
 	 * @dev Constructor of the contract
-     * @param _acceptedToken - address of the accepted token
+     * @param _acceptedToken - address of the accepted token.
      * @param _registrar - address of the DCL registrar contract
      * @param _feeCollector - address of the fee collector
      * @param _owner - address of the contract owner
@@ -50,6 +50,9 @@ contract DCLControllerV2 is Ownable {
 
     /**
 	 * @dev Register a name
+     * This function transfers the PRICE from the sender to the fee collector without checking the return value of the transferFrom function.
+     * This means that only tokens that revert when the transfer fails due to insufficient balance or insufficient approve should be used.
+     * If the token does not revert on an invalid transfer, the register will succeed and a name will be minted without being paid for.
      * @param _name - name to be registered
 	 * @param _beneficiary - owner of the name
 	 */
