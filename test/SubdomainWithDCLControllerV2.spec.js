@@ -8,13 +8,13 @@ const BN = web3.utils.BN
 const expect = require('chai').use(require('bn-chai')(BN)).expect
 
 const DCLRegistrar = artifacts.require('FakeDCLRegistrar')
-const DCLController = artifacts.require('FakeDCLController')
+const DCLControllerV2 = artifacts.require('FakeDCLControllerV2')
 const FakeENSRegistryFactory = artifacts.require('FakeENSRegistryFactory')
 const ENSRegistry = artifacts.require('ENSRegistryWithFallback')
 const ENSBaseRegistrar = artifacts.require('BaseRegistrarImplementation')
 const ENSPublicResolver = artifacts.require('ENSPublicResolver')
 
-describe('DCL Names V2', function () {
+describe('DCL Names V2 with DCLControllerV2', function () {
   this.timeout(100000)
 
   // globals
@@ -27,7 +27,6 @@ describe('DCL Names V2', function () {
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
   const ZERO_32_BYTES =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
-  const MAX_GAS_PRICE = '20000000000'
 
   const ethLabelHash = web3.utils.sha3(TOP_DOMAIN)
   const dclLabelHash = web3.utils.sha3(DOMAIN)
@@ -75,6 +74,8 @@ describe('DCL Names V2', function () {
   let deployer
   let user
   let userController
+  let feeCollector
+  let controllerOwner
   let hacker
   let anotherUser
   let fromUserController
@@ -82,6 +83,7 @@ describe('DCL Names V2', function () {
   let fromHacker
   let fromAnotherUser
   let fromDeployer
+  let fromControllerOwner
 
   // Contracts
   let manaContract
@@ -99,11 +101,14 @@ describe('DCL Names V2', function () {
     anotherUser = accounts[ADDRESS_INDEXES.anotherUser]
     hacker = accounts[ADDRESS_INDEXES.hacker]
     userController = accounts[Object.keys(ADDRESS_INDEXES).length]
+    feeCollector = accounts[Object.keys(ADDRESS_INDEXES).length + 1]
+    controllerOwner = accounts[Object.keys(ADDRESS_INDEXES).length + 2]
     fromUser = { from: user }
     fromAnotherUser = { from: anotherUser }
     fromUserController = { from: userController }
     fromHacker = { from: hacker }
     fromDeployer = { from: deployer }
+    fromControllerOwner = { from: controllerOwner }
 
     creationParams = {
       ...fromDeployer,
@@ -173,9 +178,11 @@ describe('DCL Names V2', function () {
     )
 
     // Deploy dcl controller contract
-    dclControllerContract = await DCLController.new(
+    dclControllerContract = await DCLControllerV2.new(
       manaContract.address,
       dclRegistrarContract.address,
+      feeCollector,
+      controllerOwner,
       creationParams
     )
 
@@ -1935,16 +1942,18 @@ describe('DCL Names V2', function () {
     })
   })
 
-  describe('DCLController', function () {
+  describe('DCLControllerV2', function () {
     beforeEach(async () => {
       await dclRegistrarContract.migrationFinished()
     })
 
     describe('Constructor', function () {
-      it('should be depoyed with valid arguments', async function () {
-        const contract = await DCLController.new(
+      it('should be deployed with valid arguments', async function () {
+        const contract = await DCLControllerV2.new(
           manaContract.address,
           dclRegistrarContract.address,
+          feeCollector,
+          controllerOwner,
           creationParams
         )
 
@@ -1954,24 +1963,78 @@ describe('DCL Names V2', function () {
         const registrar = await contract.registrar()
         expect(registrar).to.be.equal(dclRegistrarContract.address)
 
-        const price = await dclControllerContract.PRICE()
+        const price = await contract.PRICE()
         expect(price).to.eq.BN(PRICE)
 
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+        const collector = await contract.feeCollector()
+        expect(collector).to.be.equal(feeCollector)
+
+        const owner = await contract.owner()
+        expect(owner).to.be.equal(controllerOwner)
+      })
+
+      it('should accept owner the same as deployer', async function () {
+        const contract = await DCLControllerV2.new(
+          manaContract.address,
+          dclRegistrarContract.address,
+          feeCollector,
+          deployer,
+          creationParams
+        )
+
+        const owner = await contract.owner()
+        expect(owner).to.be.equal(deployer)
       })
 
       it('reverts if acceptedToken is not a contract', async function () {
         await assertRevert(
-          DCLController.new(user, dclRegistrarContract.address, creationParams),
+          DCLControllerV2.new(
+            user,
+            dclRegistrarContract.address,
+            feeCollector,
+            controllerOwner,
+            creationParams
+          ),
           'Accepted token should be a contract'
         )
       })
 
       it('reverts if registrar is not a contract', async function () {
         await assertRevert(
-          DCLController.new(manaContract.address, user, creationParams),
+          DCLControllerV2.new(
+            manaContract.address,
+            user,
+            feeCollector,
+            controllerOwner,
+            creationParams
+          ),
           'Registrar should be a contract'
+        )
+      })
+
+      it('reverts if fee collector is address 0', async function () {
+        await assertRevert(
+          DCLControllerV2.new(
+            manaContract.address,
+            dclRegistrarContract.address,
+            ZERO_ADDRESS,
+            controllerOwner,
+            creationParams
+          ),
+          'Invalid fee collector'
+        )
+      })
+
+      it('reverts if owner is address 0', async function () {
+        await assertRevert(
+          DCLControllerV2.new(
+            manaContract.address,
+            dclRegistrarContract.address,
+            feeCollector,
+            ZERO_ADDRESS,
+            creationParams
+          ),
+          'Ownable: new owner is the zero address'
         )
       })
     })
@@ -1981,10 +2044,10 @@ describe('DCL Names V2', function () {
         const { logs } = await dclControllerContract.register(
           subdomain1,
           user,
-          { ...fromUser, gasPrice: MAX_GAS_PRICE }
+          { ...fromUser }
         )
 
-        expect(logs.length).to.be.equal(5)
+        expect(logs.length).to.be.equal(4)
 
         const newOwnerLog = logs[0]
         expect(newOwnerLog.event).to.be.equal('NewOwner')
@@ -2011,12 +2074,7 @@ describe('DCL Names V2', function () {
         )
         expect(nameRegisteredLog.args._subdomain).to.be.equal(subdomain1)
 
-        const burnLog = logs[3]
-        expect(burnLog.event).to.be.equal('Burn')
-        expect(burnLog.args.burner).to.be.equal(dclControllerContract.address)
-        expect(burnLog.args.value).to.eq.BN(PRICE)
-
-        const nameBoughtLog = logs[4]
+        const nameBoughtLog = logs[3]
         expect(nameBoughtLog.event).to.be.equal('NameBought')
         expect(nameBoughtLog.args._caller).to.be.equal(user)
         expect(nameBoughtLog.args._beneficiary).to.be.equal(user)
@@ -2040,6 +2098,36 @@ describe('DCL Names V2', function () {
           subdomain1Hash
         )
         expect(currentResolver).to.be.equal(ZERO_ADDRESS)
+      })
+
+      it('should transfer the fee from the caller to the fee collector', async function () {
+        const price = await dclControllerContract.PRICE()
+
+        expect(price).to.be.gt.BN(0)
+
+        const initialBalance = new BN('1000000000000000000000')
+
+        let expectedUserBalance = initialBalance
+        let expectedFeeCollectorBalance = initialBalance
+
+        let userBalance = await manaContract.balanceOf(user)
+        let feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
+
+        await dclControllerContract.register(subdomain1, user, {
+          ...fromUser,
+        })
+
+        expectedUserBalance = expectedUserBalance.sub(price)
+        expectedFeeCollectorBalance = expectedFeeCollectorBalance.add(price)
+
+        userBalance = await manaContract.balanceOf(user)
+        feeCollectorBalance = await manaContract.balanceOf(feeCollector)
+
+        expect(userBalance).to.eq.BN(expectedUserBalance)
+        expect(feeCollectorBalance).to.eq.BN(expectedFeeCollectorBalance)
       })
 
       it('should register a name with a-z', async function () {
@@ -2114,16 +2202,6 @@ describe('DCL Names V2', function () {
           web3.utils.toHex(tokenId)
         )
         expect(subdomain).to.be.equal(name)
-      })
-
-      it('reverts when trying to register a name with a gas price higher than max gas price', async function () {
-        await assertRevert(
-          dclControllerContract.register(subdomain1, user, {
-            ...fromUser,
-            gasPrice: MAX_GAS_PRICE + 1,
-          }),
-          'Maximum gas price allowed exceeded'
-        )
       })
 
       it('reverts when the name has invalid characters', async function () {
@@ -2250,19 +2328,19 @@ describe('DCL Names V2', function () {
         const bigUsername = 'abignameregistry'
         await assertRevert(
           dclControllerContract.register(bigUsername, user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
       })
 
       it('reverts when trying to register a name with a lenght < 3', async function () {
         await assertRevert(
           dclControllerContract.register('', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
 
         await assertRevert(
           dclControllerContract.register('a', user, fromUser),
-          'Name should be greather than or equal to 2 and less than or equal to 15'
+          'Name should be greater than or equal to 2 and less than or equal to 15'
         )
       })
 
@@ -2271,7 +2349,8 @@ describe('DCL Names V2', function () {
         await manaContract.burn(balance, fromUser)
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
-          'Insufficient funds'
+          // Error message from mana contract.
+          'invalid opcode'
         )
       })
 
@@ -2279,79 +2358,102 @@ describe('DCL Names V2', function () {
         await manaContract.approve(dclControllerContract.address, 0, fromUser)
         await assertRevert(
           dclControllerContract.register(subdomain1, user, fromUser),
-          'The contract is not authorized to use the accepted token on sender behalf'
+          // Error message from mana contract.
+          'invalid opcode'
         )
       })
     })
 
-    describe('updateMaxGasPrice', function () {
-      it('should update the max gas price', async function () {
-        let maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(MAX_GAS_PRICE)
+    describe('setFeeCollector', function () {
+      it('should update the fee collector', async function () {
+        const newFeeCollector = anotherUser
+        expect(await dclControllerContract.feeCollector()).to.be.equal(
+          feeCollector
+        )
+        await dclControllerContract.setFeeCollector(
+          newFeeCollector,
+          fromControllerOwner
+        )
+        expect(await dclControllerContract.feeCollector()).to.be.equal(
+          newFeeCollector
+        )
+      })
 
-        const newMaxGasPrice = 1000000000
-        const { logs } = await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
+      it('should emit a FeeCollectorChanged event', async function () {
+        const oldFeeCollector = feeCollector
+        const newFeeCollector = anotherUser
+
+        const { logs } = await dclControllerContract.setFeeCollector(
+          newFeeCollector,
+          fromControllerOwner
         )
 
         expect(logs.length).to.be.equal(1)
-
-        const newOwnerLog = logs[0]
-        expect(newOwnerLog.event).to.be.equal('MaxGasPriceChanged')
-        expect(newOwnerLog.args._oldMaxGasPrice).to.eq.BN(MAX_GAS_PRICE)
-        expect(newOwnerLog.args._newMaxGasPrice).to.eq.BN(newMaxGasPrice)
-
-        maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
+        expect(logs[0].event).to.be.equal('FeeCollectorChanged')
+        expect(logs[0].args._oldFeeCollector).to.be.equal(oldFeeCollector)
+        expect(logs[0].args._newFeeCollector).to.be.equal(newFeeCollector)
       })
 
-      it('should update the max gas price to 1 gwei', async function () {
-        const newMaxGasPrice = 1000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('should update the max gas price to 30 gwei', async function () {
-        const newMaxGasPrice = 30000000000
-        await dclControllerContract.updateMaxGasPrice(
-          newMaxGasPrice,
-          fromDeployer
-        )
-
-        const maxGasPrice = await dclControllerContract.maxGasPrice()
-        expect(maxGasPrice).to.eq.BN(newMaxGasPrice)
-      })
-
-      it('reverts when updating the max gas price by an unauthorized user', async function () {
-        const newMaxGasPrice = 10000000000
+      it('reverts when the sender is not the owner', async function () {
         await assertRevert(
-          dclControllerContract.updateMaxGasPrice(newMaxGasPrice, fromHacker),
+          dclControllerContract.setFeeCollector(anotherUser, fromAnotherUser),
           'Ownable: caller is not the owner'
         )
       })
 
-      it('reverts when updating the max gas price with lower than 1 gwei', async function () {
+      it('reverts when the fee collector is address 0', async function () {
         await assertRevert(
-          dclControllerContract.updateMaxGasPrice(0, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
+          dclControllerContract.setFeeCollector(
+            ZERO_ADDRESS,
+            fromControllerOwner
+          ),
+          'Invalid fee collector'
+        )
+      })
+    })
+
+    describe('transferOwnership', function () {
+      it('should update the owner', async function () {
+        let currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(controllerOwner)
+
+        await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
         )
 
+        currentOwner = await dclControllerContract.owner()
+
+        expect(currentOwner).to.be.equal(anotherUser)
+      })
+
+      it('should emit an OwnershipTransferred event', async function () {
+        const { logs } = await dclControllerContract.transferOwnership(
+          anotherUser,
+          fromControllerOwner
+        )
+
+        expect(logs.length).to.be.equal(1)
+        expect(logs[0].event).to.be.equal('OwnershipTransferred')
+        expect(logs[0].args.previousOwner).to.be.equal(controllerOwner)
+        expect(logs[0].args.newOwner).to.be.equal(anotherUser)
+      })
+
+      it('reverts when the caller is not the owner of the contract', async function () {
         await assertRevert(
-          dclControllerContract.updateMaxGasPrice(999999999, fromDeployer),
-          'Max gas price should be greater than or equal to 1 gwei'
+          dclControllerContract.transferOwnership(anotherUser, fromAnotherUser),
+          'Ownable: caller is not the owner'
         )
       })
 
-      it('reverts when updating the max gas price with the same value', async function () {
+      it('reverts when the new owner is the zero address', async function () {
         await assertRevert(
-          dclControllerContract.updateMaxGasPrice(MAX_GAS_PRICE, fromDeployer),
-          'Max gas price should be different'
+          dclControllerContract.transferOwnership(
+            ZERO_ADDRESS,
+            fromControllerOwner
+          ),
+          'Ownable: new owner is the zero address'
         )
       })
     })

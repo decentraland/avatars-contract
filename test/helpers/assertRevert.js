@@ -5,9 +5,7 @@ export default async function assertRevert(promise, message) {
     await promise
   } catch (error) {
     error.message.should.include(
-      message
-        ? `VM Exception while processing transaction: revert ${message}`
-        : 'revert',
+      message || 'revert',
       `Expected "revert", got ${error} instead`
     )
     return

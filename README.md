@@ -4,6 +4,10 @@
 
 ### Mainnet
 
+## Update 04/04/2023
+
+- DCLControllerV2 = `0xbe92b49aee993adea3a002adcda189a2b7dec56c`
+
 ## Update 07/10/2020
 
 - ENS Public Resolver = `0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41` 
@@ -21,6 +25,10 @@
 - ENS Public Resolver = `0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8`
 - ENS Base Registrar = `0xfac7bea255a6990f749363002136af6556b31e04`
 - ENS Registrar Controller = `0xb22c1c159d12461ea124b0deb4b5b93020e6ad16`
+
+### Goerli
+
+- DCLControllerV2 - `0xe23b047c8ee33d0c423676544bca6d2c9d3faa49`
 
 ### Ropsten
 
