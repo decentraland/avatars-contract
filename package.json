@@ -8,7 +8,8 @@
     "test:coverage": "SOLIDITY_COVERAGE=true scripts/test.sh",
     "test:watch": "nodemon test/** contracts/** --exec 'npm test'",
     "lint": "npx eslint test && npx solium -d contracts",
-    "lint:fix": "npx eslint --fix test && npx solium -d contracts --fix"
+    "lint:fix": "npx eslint --fix test && npx solium -d contracts --fix",
+    "compile": "npx hardhat compile"
   },
   "repository": {
     "type": "git",
